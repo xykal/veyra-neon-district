@@ -91,7 +91,7 @@ docker compose up -d --build
 Every push to `main`, tag `v*`, PR, or manual run triggers:
 
 1. Syntax / secret-pattern hygiene, 26 Node unit+integration tests on Node 22 **and** 24.
-2. Six Chromium browser tests covering desktop, mobile portrait/landscape, two-client chat/reconnect, 2D fallback and real two-peer WebRTC with fake microphone RTP.
+2. Seven Chromium browser tests covering desktop, mobile portrait/landscape, two-client chat/reconnect, 2D fallback and real two-peer WebRTC with fake microphone RTP.
 3. Reproducible runtime packaging into an Actions artifact (`dist/` + `SHA256SUMS`).
 4. **Only after tests pass**, build and push multi-architecture Docker images (`linux/amd64`, `linux/arm64`) to:
 
@@ -100,6 +100,8 @@ ghcr.io/xykal/veyra-neon-district:latest
 ghcr.io/xykal/veyra-neon-district:sha-<commit>
 ghcr.io/xykal/veyra-neon-district:v0.2.0  # when that release tag is pushed
 ```
+
+The published image is also started in CI: health endpoint, writable data directory and non-root game-process UID are checked.
 
 Publishing uses Actions' built-in `GITHUB_TOKEN` with job-scoped package write permission—not an uploaded personal token. A newly created GHCR package can be private; its owner must check package visibility before unauthenticated pulling. Building directly from the GitHub Dockerfile avoids that dependency.
 

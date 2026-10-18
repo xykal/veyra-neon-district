@@ -97,3 +97,14 @@ test('two-peer WebRTC + fake mic RTP; early PTT release never leaves mic transmi
   expect(errors.flat()).toEqual([]);
  }finally{await a.close();await b.close();}
 });
+
+test('mobile Lite fallback: multiplayer, supported controls only, immediate tap fire',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await context.newPage();const errors=errorsOn(p),sent=[];
+ p.on('websocket',ws=>ws.on('framesent',frame=>{try{sent.push(JSON.parse(String(frame.payload)));}catch{}}));
+ try{
+  await p.goto(base+'/2d/');await p.locator('#nickname').fill('LiteTouch');await p.locator('#playbtn').click();await p.waitForFunction(()=>__state.mode==='online'&&__state.aimAngle!==null);
+  expect(await p.evaluate(()=>__touch.enabled)).toBe(true);await expect(p.locator('.tb-gps')).toBeHidden();await expect(p.locator('.tb-voice')).toBeHidden();
+  await p.locator('.tb-fire').tap();await expect.poll(()=>sent.filter(m=>m.t==='fire').length).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+ }finally{await context.close();}
+});

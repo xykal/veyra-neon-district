@@ -15,7 +15,7 @@ Date: 2026-10-18. The committed automated checks are run by GitHub Actions on ev
 - Stale-control timeout; voice opt-in roster/target relay/talk/leave.
 - Cross-origin WS refusal, unmasked frame rejection, fragmented text + interleaved ping, oversized frame and flood bounds.
 
-## Chromium browser checks (6 tests)
+## Chromium browser checks (7 tests)
 
 1. Desktop true 3D: loads 17 GLB templates for 18 classes, GPS search/typing, stable quality count, reused route geometry, driving FX above 90 units/s without page errors.
 2. Two independent browser contexts: real WebSocket snapshots, visible chat exchange, reload/resume token continuity, leaderboard panel.
@@ -23,6 +23,10 @@ Date: 2026-10-18. The committed automated checks are run by GitHub Actions on ev
 4. 844×390 landscape emulation: primary controls in bounds; touch-only panel opening/closing.
 5. Simulated unavailable WebGL: automatic 2D fallback, successful multiplayer handshake.
 6. Two real RTCPeerConnections using fake browser microphone: connected peers, received audio RTP bytes, no self-peer, push-to-talk release, delayed-permission early-release privacy regression, mic disable / peer cleanup.
+
+7. Mobile 2D Lite: real multiplayer, hidden unsupported GPS/voice buttons, immediate touch-fire protocol delivery and no page errors.
+
+The Docker publishing job also boots the newly published image, checks `/healthz`, confirms the data directory is writable as `node`, and verifies that the game PID is running as UID 1000.
 
 ## Local verification
 

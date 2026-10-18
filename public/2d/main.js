@@ -52,6 +52,7 @@ const touch = new TouchControls((act, down) => {
   if (!down || state.mode === 'menu') return;
   if (act === 'action') send({t:state.inCar ? MSG.EXIT : MSG.ENTER});
   if (act === 'horn') send({t:MSG.HORN});
+  if (act === 'fire' && state.aimAngle !== null) send({t:MSG.FIRE,a:state.aimAngle});
   if (act === 'chat') { input.openChat(); chatinput.focus(); }
   if (act === 'board' || act === 'menu') $('scoreboard').classList.toggle('hidden');
 });

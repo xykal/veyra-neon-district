@@ -80,6 +80,7 @@ jobs:
             type=sha,prefix=sha-
             type=ref,event=tag
       - uses: docker/build-push-action@v6
+        id: build
         with:
           context: .
           push: true
@@ -88,3 +89,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Smoke-test published container
+        run: |
+          docker run -d --name veyra-smoke -p 127.0.0.1:3102:3000 ghcr.io/xykal/veyra-neon-district@${{ steps.build.outputs.digest }}
+          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:3102/healthz
+          docker exec --user node veyra-smoke test -w /app/data
+          docker exec veyra-smoke node -e 'const s=require("fs").readFileSync("/proc/1/status","utf8");if(!/^Uid:\s+1000\s/m.test(s))process.exit(1)'
+      - name: Container cleanup
+        if: always()
+        run: |
+          docker logs veyra-smoke || true
+          docker rm -f veyra-smoke || true
