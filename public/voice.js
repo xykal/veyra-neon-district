@@ -53,6 +53,8 @@ export class Voice {
   hold(on) {
     this.held = !!on;
     if (!on) { this.setTalking(false); return; }
+    // Retry remote playback during the PTT user gesture (Safari/autoplay recovery).
+    for (const p of this.peers.values()) if (p.audio.srcObject) p.audio.play().catch(() => {});
     if (this.enabled) this.setTalking(true);
     else void this.enable();
   }
