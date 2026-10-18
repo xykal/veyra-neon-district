@@ -65,6 +65,8 @@ var startup_to_menu_ms=0.0
 var diag_clock=0.0
 var low_fps_time=0.0
 var adaptive_scale=.7
+var preview_yaw=0.0
+var preview_idle=0.0
 
 func _ready():
  boot_time=Time.get_ticks_msec()/1000.0
@@ -93,15 +95,28 @@ func _ready():
  elif "--online-test" in OS.get_cmdline_user_args():call_deferred("_online_test")
  elif demo_capture:call_deferred("start_game",false)
  if capture_path!="":call_deferred("_capture")
- print("VEYRA_NATIVE_READY version=0.5.0-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/38-sfx; world=",world.data.seed)
+ print("VEYRA_NATIVE_READY version=0.5.1-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/38-sfx/lombok-shell; world=",world.data.seed)
 func _preview():
- preview=Citizen.new();add_child(preview);preview.position=Vector3(-40,0,-40);preview.setup(int(prefs.data.look),quality)
+ preview=Citizen.new();add_child(preview);preview.position=Vector3(-40,0,-40);preview.rotation.y=preview_yaw;preview.setup(int(prefs.data.look),quality)
  pedestal=MeshInstance3D.new();var disk=CylinderMesh.new();disk.top_radius=2.2;disk.bottom_radius=2.3;disk.height=.12;disk.radial_segments=48;pedestal.mesh=disk;var mat=StandardMaterial3D.new();mat.albedo_color=Color("1b3e46");mat.roughness=.55;mat.metallic=.25;pedestal.material_override=mat;pedestal.position=preview.position-Vector3.UP*.07;add_child(pedestal)
  menu_camera=Camera3D.new();menu_camera.fov=39;menu_camera.position=preview.position+Vector3(2.7,1.4,3.2);add_child(menu_camera);menu_camera.look_at(preview.position+Vector3(0,.96,0));menu_camera.current=true
 func set_look(index):
  prefs.data.look=clampi(index,0,5);prefs.save();var p=preview.position;preview.queue_free();preview=Citizen.new();add_child(preview);preview.position=p;preview.setup(int(prefs.data.look),quality)
  if player and not playing:player.set_look(int(prefs.data.look))
  if ui:ui.notify(["Raka","Kai","Atlas","Naya","Luna","Asha"][int(prefs.data.look)]+" · native rig selected")
+func rotate_preview(delta_x):
+ if preview==null:return
+ preview_yaw+=delta_x*.012;preview.rotation.y=preview_yaw;preview_idle=0
+func save_vault(slot):
+ if not prefs.data.vault_looks is Array:prefs.data.vault_looks=[0,1,2]
+ while prefs.data.vault_looks.size()<3:prefs.data.vault_looks.append(0)
+ prefs.data.vault_looks[clampi(slot,0,2)]=int(prefs.data.look);prefs.save()
+ if ui:ui.notify("Vault slot "+str(slot+1)+" disimpan")
+ if ui:ui.refresh_vault()
+func apply_vault(slot):
+ if not prefs.data.vault_looks is Array:return
+ if slot>=prefs.data.vault_looks.size():return
+ set_look(int(prefs.data.vault_looks[slot]))
 func set_quality(value,save=true):
  prefs.data.quality=clampi(value,-1,2);quality=prefs.tier();quality_spec=Preferences.PRESETS[quality]
  if save:prefs.save()
@@ -220,7 +235,9 @@ func _unhandled_input(event):
   if event.button_index==MOUSE_BUTTON_WHEEL_UP and event.pressed:player.spring.spring_length=maxf(2,player.spring.spring_length-.25)
 func _process(delta):
  if not playing:
-  if preview and not loading:preview.rotation.y+=delta*.1
+  if preview and not loading:
+   preview_idle+=delta
+   if preview_idle>1.6:preview.rotation.y+=delta*.42
   return
  if online and not network_vehicle_pending.is_empty():
   var id=network_vehicle_pending.keys()[0]
@@ -466,7 +483,7 @@ func _check(value,label):
  if not value:native_failures+=1;push_error("NATIVE_ASSERT_FAILED "+label)
 
 func diagnostic_data():
- return {"app":"Veyra Native","version":"0.5.0-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
+ return {"app":"Veyra Native","version":"0.5.1-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
 func _record_diagnostics(stage):
  load_stage=stage
  var file=FileAccess.open("user://diagnostics.json",FileAccess.WRITE)

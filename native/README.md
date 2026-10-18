@@ -1,24 +1,25 @@
-# Veyra Native — 0.5.0-alpha.1
+# Veyra Native — 0.5.1-alpha.1
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.0-alpha.1)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.1-alpha.1)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
 
-## 0.5 Lombok Direction
+## 0.5.1 Real Lombok Island
 
-This alpha makes the native world feel like a proper island city instead of a gray test grid, while keeping the anti-crash memory budgets from 0.4.1. See [PERFORMANCE-0.5.0.md](PERFORMANCE-0.5.0.md) for the same-harness comparison. Software llvmpipe numbers are not a physical Android FPS promise.
+The island is now a real Lombok shell (outline, Gili islets, Rinjani crater + Segara Anak, rice terraces, warungs, docks, 22 Lombok POI names) with a FiveM-style light material pass, a 360° drag lobby with vault looks, realistic car finishes, bigger touch controls and snappier aim. See [PERFORMANCE-0.5.1.md](PERFORMANCE-0.5.1.md) for the same-harness comparison. Software llvmpipe numbers are not a physical Android FPS promise.
 
-- **Custom splash / no Godot logo**: `assets/boot_splash.png` is an original Lombok-sunset Veyra boot art, configured through `application/boot_splash/*`; launcher icon is the original V mark.
-- **Lombok-inspired island shell**: `assets/island.json` + `district.gd` add ocean, beaches, mountain silhouettes, rice terraces, palms/shrubs/grass, warungs, rocks, docks and village huts around the shared city plan. Online roads/POIs/spawns stay compatible; the full surveyed Lombok map can replace the arrays later.
+- **Custom splash / no Godot logo**: `assets/boot_splash.png` is an original Lombok-sunset Veyra boot art. The 0.5.1 settings probe fixes the key path (`boot_splash/*` inside `[application]`) so the engine logo is really gone; launcher icon is the original V mark.
+- **Real Lombok island shell**: `tools/native-lombok-map.py` v3 writes `assets/island.json` (deterministic) with the Lombok coastline, Gili islets, Rinjani volcanic profile with crater and Segara Anak lake, terraces, palms/shrubs/grass, warungs, rocks, docks and villages; `district.json` carries 22 real Lombok POI names. Shared online city collision stays planar.
 - **Streetwear character pass**: `tools/native-fashion.py` makes pants baggier/cargo, tops oversized and boots chunkier without touching the 65-bone rig or 20 clips. Runtime accessories add caps, crossbody bags, cargo pockets, cuffs and chains per preset.
 - **Motion/SFX completeness**: smoother clip crossfades, additive lean/bob, jump/land layers, landing intensity, footstep surfaces, vehicle enter/exit/brake/scrape/impact and coastal ambient loops (38 synthesized WAVs).
-- **Larger mobile controls**: pads scale with viewport, stay clamped inside 960×540/1280×720/1600×720 and support independent steering, pedals and camera-look.
-- **AA/graphics detail**: Balanced uses 2× MSAA, High uses 4× MSAA; terrain is one readable unshaded surface with island color bands and a separate ocean shader. SAFE still boots with no MSAA/shadows and trims on memory warnings.
+- **Larger mobile controls**: pads scale up with `control_scale` (pause slider `UKURAN TOMBOL SENTUH`), stay clamped inside 960×540/1280×720/1600×720 and support independent steering, pedals and camera-look. Aim response is 1.35× with wider pitch so it no longer feels stiff.
+- **AA/graphics detail**: Balanced uses 2× MSAA, High uses 4× MSAA; terrain is one unshaded surface with height-band palette (sand→grass→jungle→rock→ash), crater relief shading and distance-fade detail; separate ocean shader; vehicles get clearcoat paint/glass/chrome/emissive lamp finishes and body details. SAFE still boots with no MSAA/shadows and trims on memory warnings.
+- **360° lobby + vault**: drag the character in the menu for a full 360° inspection, save/pick 3 vault looks, and read the new Lombok Is. title.
 
 - One terrain surface replaces intersecting road/sidewalk/paint planes. Facade windows are filtered material detail instead of overlapping thin boxes. Original clothing is layered with clearance; always-hidden skin faces are cut offline, without Android GPU readbacks.
 - Shared meshes/materials, bounded nearest-vehicle streaming, bounded staged model warmup and staged loading. Menu startup no longer builds the whole city or a second hidden player.

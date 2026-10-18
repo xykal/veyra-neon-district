@@ -43,7 +43,8 @@ func set_look(look):
  avatar.queue_free();avatar=Avatar.new();add_child(avatar);avatar.setup(look,quality)
 func orbit(delta):
  if delta.length_squared()>.01:last_look_time=Time.get_ticks_msec()
- camera_yaw+=delta.x*.0038;camera_pitch=clampf(camera_pitch+delta.y*.0028,-.1,.8)
+ var aim_boost=1.35 if controls.aim else 1.0
+ camera_yaw+=delta.x*.0042*aim_boost;camera_pitch=clampf(camera_pitch+delta.y*.0031*aim_boost,-.22 if controls.aim else -.1,.92 if controls.aim else .8)
 func _physics_process(delta):
  if not enabled:return
  var previous=global_position
@@ -58,10 +59,11 @@ func _physics_process(delta):
   ragdoll_timer-=delta
   if ragdoll_timer<=0 and not external_dead:recover()
  else:
-  avatar.position=Vector3.ZERO;pivot.position=Vector3(0,1.2,0);spring.spring_length=3.4 if controls.aim else 4.1
+  avatar.position=Vector3.ZERO;pivot.position=Vector3(0,1.2,0);spring.spring_length=lerpf(spring.spring_length,3.15 if controls.aim else 4.1,1-exp(-delta*8.0))
+  if camera:camera.fov=lerpf(camera.fov,52.0 if controls.aim else 62.0,1-exp(-delta*7.0))
   var axis:Vector2=controls.move;var forward=Vector3(cos(camera_yaw),0,sin(camera_yaw));var right=Vector3(-sin(camera_yaw),0,cos(camera_yaw));var direction=(forward*-axis.y+right*axis.x).limit_length(1)
   var sprinting=controls.sprint and stamina>.08 and not controls.crouch and not controls.aim
-  var speed=6.2 if sprinting else (1.4 if controls.crouch else 3.0)
+  var speed=6.2 if sprinting else (1.4 if controls.crouch else (2.35 if controls.aim else 3.0))
   if sprinting and axis.length()>.5:stamina=maxf(0,stamina-delta*.19)
   else:stamina=minf(1,stamina+delta*.13)
   var acceleration=1-exp(-delta*(13 if direction.length()>.01 else 21));velocity.x=lerpf(velocity.x,direction.x*speed,acceleration);velocity.z=lerpf(velocity.z,direction.z*speed,acceleration)

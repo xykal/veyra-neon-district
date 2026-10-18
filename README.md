@@ -28,7 +28,7 @@ A separate **real Godot native client**, not a WebView, is being shipped alongsi
 
 - [Native project, controls, downloads and feature-parity limits](native/README.md)
 - [Native Windows/Android build workflow](https://github.com/xykal/veyra-neon-district/actions/workflows/native.yml)
-- [Native alpha downloads](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.4.1-alpha.1)
+- [Native alpha downloads](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.1-alpha.1)
 
 The native client adds artist-authored humanoids, imported animation clips, physical Jolt ragdolls, native spatial sound and offline 6-DOF vehicle simulation. **Online still uses the existing authoritative planar server adapter; voice/full wardrobe and several web systems are not complete native parity.** See the native guide rather than assuming an APK automatically equals GTA/FiveM realism or universal device performance.
 

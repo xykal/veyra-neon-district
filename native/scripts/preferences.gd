@@ -6,7 +6,7 @@ const PRESETS = [
  {"name":"BALANCED","distance":100.0,"scale":0.85,"shadows":true,"ragdolls":2,"people":4,"vehicles":24,"remote":10,"fps":60,"lod":1.0},
  {"name":"HIGH · manual","distance":150.0,"scale":1.0,"shadows":true,"ragdolls":3,"people":8,"vehicles":40,"remote":16,"fps":60,"lod":1.3}
 ]
-var data = {"nickname":"Warga","token":"","tokens":{},"look":0,"quality":-1,"master":0.8,"sfx":0.85,"ambient":0.35,"perf_revision":0,"look_sensitivity":1.0,"server":"wss://veyra-neon-district.dikanjut.workers.dev/"}
+var data = {"nickname":"Warga","token":"","tokens":{},"look":0,"quality":-1,"master":0.8,"sfx":0.85,"ambient":0.35,"perf_revision":0,"look_sensitivity":1.0,"control_scale":1.08,"aim_response":1.25,"vault_looks":[0,1,2],"server":"wss://veyra-neon-district.dikanjut.workers.dev/"}
 func _init():
  if FileAccess.file_exists(SAVE_PATH):
   var f=FileAccess.open(SAVE_PATH,FileAccess.READ)
@@ -22,6 +22,10 @@ func _init():
  if int(data.perf_revision)<1 and OS.has_feature("mobile"):data.quality=-1
  data.perf_revision=1
  data.look_sensitivity=clampf(float(data.look_sensitivity),.45,1.8)
+ data.control_scale=clampf(float(data.control_scale),.85,1.45)
+ data.aim_response=clampf(float(data.aim_response),.8,1.8)
+ if not data.vault_looks is Array or data.vault_looks.size()!=3:data.vault_looks=[0,1,2]
+ for i in range(data.vault_looks.size()):data.vault_looks[i]=clampi(int(data.vault_looks[i]),0,5)
  if not data.tokens is Dictionary:data.tokens={}
  data.master=clampf(float(data.master),0,1)
 func save():

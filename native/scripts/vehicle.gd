@@ -46,6 +46,16 @@ func configure(record,types,tier=0,audio=null):
  ray_points=[Vector3(length_m*.32,.9,width_m*.42),Vector3(length_m*.32,.9,-width_m*.42),Vector3(-length_m*.32,.9,width_m*.42),Vector3(-length_m*.32,.9,-width_m*.42)]
  audio_node=audio
  global_position=Vector3(float(record.x)/10,.03,float(record.y)/10);rotation.y=-float(record.a)
+static var finish_mats={}
+static var PAINTS={"sedan":"274b78","sport":"b32a2e","truck":"6d6f74","police":"e8ecf2","taxi":"d8a12a","van":"d8d2c4","bus":"2f6f8f","ambulance":"eaeaea","firetruck":"b32222","garbage":"2f6a4f","delivery":"c8642a","suv":"22303c","luxury":"14161c","supercar":"e2670f","kart":"2a8f5c","shovel":"c9a227","tractor":"3f6f2f"}
+static func _finish(key,metal,rough,color=Color.WHITE,emission=Color.BLACK):
+ var id=key
+ if finish_mats.has(id):return finish_mats[id]
+ var m=StandardMaterial3D.new();m.albedo_color=color;m.metallic=metal;m.roughness=rough;m.vertex_color_use_as_albedo=false
+ if emission!=Color.BLACK:m.emission_enabled=true;m.emission=emission;m.emission_energy_multiplier=1.6
+ if key=="paint":m.clearcoat_enabled=true;m.clearcoat=.85;m.clearcoat_roughness=.08
+ if key=="glass":m.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;m.albedo_color=Color(.03,.05,.07,.72);m.metallic=.35;m.roughness=.06
+ finish_mats[id]=m;return m
 func _load_model(tier):
  visual=Node3D.new();add_child(visual)
  var file=FILES.get(kind,"sedan");var path="res://assets/cars/"+file+".glb"
@@ -57,10 +67,39 @@ func _load_model(tier):
  model.force_update_transform()
  var box=_bounds(model);var size=box.size;model.position-=Vector3(box.position.x+size.x/2,box.position.y,box.position.z+size.z/2)
  visual.scale=Vector3(length_m/maxf(.01,size.x),length_m/maxf(.01,size.x),width_m/maxf(.01,size.z));height_m=size.y*visual.scale.y
+ var paint=_finish("paint:"+kind,0.72,0.24,Color(PAINTS.get(kind,"274b78")))
+ var glass=_finish("glass",0,0)
+ var rubber=_finish("rubber",0.0,0.92,Color("101216"))
+ var headlight=_finish("head",0,0.25,Color("fff6d8"),Color("fff2c0"))
+ var taillight=_finish("tail",0,0.3,Color("7c1512"),Color("e02a1c"))
+ var chrome=_finish("chrome",0.95,0.18,Color("c9ced4"))
  for node in _nodes(model):
   if node is MeshInstance3D:
    node.visibility_range_end=[80.0,130.0,200.0][tier];node.lod_bias=[.6,1.0,1.3][tier]
-   if "wheel" in str(node.name).to_lower():wheel_nodes.append({"node":node,"rest":node.quaternion,"front":"front" in str(node.name),"spin":0.0})
+   var nm=str(node.name).to_lower()
+   if "glass" in nm or "window" in nm or "windshield" in nm:node.material_override=glass
+   elif "tail" in nm or "brake" in nm:node.material_override=taillight
+   elif "head" in nm or "lamp" in nm:node.material_override=headlight
+   elif "rubber" in nm or "wheel" in nm:node.material_override=rubber
+   elif "trim" in nm or "bumper" in nm:node.material_override=chrome
+   else:node.material_override=paint
+   if "wheel" in nm:wheel_nodes.append({"node":node,"rest":node.quaternion,"front":"front" in nm,"spin":0.0})
+ _add_car_details(paint,glass,headlight,taillight,chrome)
+func _add_car_details(paint,glass,headlight,taillight,chrome):
+ # Silhouette/detail pass on an unscaled node: visual.scale double-applies otherwise.
+ var details=Node3D.new();add_child(details)
+ var front=length_m*.46;var rear=-length_m*.46;var half_w=width_m*.5;var body_y=height_m*.52
+ for side in [-1,1]:
+  var mirror=MeshInstance3D.new();var mb=BoxMesh.new();mb.size=Vector3(.16,.11,.34);mirror.mesh=mb;mirror.position=Vector3(front*.72,body_y+height_m*.12,side*(half_w+.12));mirror.material_override=chrome;details.add_child(mirror)
+ var lamp_f=MeshInstance3D.new();var lf=BoxMesh.new();lf.size=Vector3(.12,.16,width_m*.7);lamp_f.mesh=lf;lamp_f.position=Vector3(front+.02,body_y,0);lamp_f.material_override=headlight;details.add_child(lamp_f)
+ var lamp_r=MeshInstance3D.new();var lr=BoxMesh.new();lr.size=Vector3(.12,.18,width_m*.72);lamp_r.mesh=lr;lamp_r.position=Vector3(rear-.02,body_y,0);lamp_r.material_override=taillight;details.add_child(lamp_r)
+ var pipe=MeshInstance3D.new();var pc=CylinderMesh.new();pc.top_radius=.07;pc.bottom_radius=.08;pc.height=.22;pc.radial_segments=10;pipe.mesh=pc;pipe.rotation_degrees=Vector3(0,0,90);pipe.position=Vector3(rear-.08,height_m*.2,-width_m*.28);pipe.material_override=chrome;details.add_child(pipe)
+ if kind in ["sport","supercar","luxury"]:
+  var wing=MeshInstance3D.new();var wb=BoxMesh.new();wb.size=Vector3(.34,.06,width_m*.86);wing.mesh=wb;wing.position=Vector3(rear+.18,height_m*.92,0);wing.material_override=paint;details.add_child(wing)
+  for side in [-1,1]:
+   var stay=MeshInstance3D.new();var sb=BoxMesh.new();sb.size=Vector3(.08,.22,.06);stay.mesh=sb;stay.position=Vector3(rear+.18,height_m*.8,side*width_m*.3);stay.material_override=chrome;details.add_child(stay)
+ if kind in ["police","taxi","ambulance","firetruck"]:
+  var bar=MeshInstance3D.new();var bb=BoxMesh.new();bb.size=Vector3(.34,.10,width_m*.5);bar.mesh=bb;bar.position=Vector3(0,height_m*1.02,0);bar.material_override=taillight if kind=="firetruck" else headlight;details.add_child(bar)
 func _nodes(root):
  var out=[root]
  for c in root.get_children():out.append_array(_nodes(c))

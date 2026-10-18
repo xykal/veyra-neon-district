@@ -1,4 +1,19 @@
 extends CanvasLayer
+class LookStage extends Control:
+ var owner_ui
+ var drag_id=-1
+ var last=Vector2.ZERO
+ func _ready():mouse_filter=Control.MOUSE_FILTER_STOP
+ func _gui_input(event):
+  if owner_ui==null or owner_ui.app==null:return
+  if event is InputEventScreenDrag:
+   owner_ui.app.rotate_preview(event.relative.x);accept_event()
+  elif event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT:
+   if event.pressed:drag_id=-2;last=event.position
+   else:drag_id=-1
+   accept_event()
+  elif event is InputEventMouseMotion and drag_id==-2:
+   owner_ui.app.rotate_preview(event.relative.x);accept_event()
 const Touch=preload("res://scripts/touch_controls.gd")
 const Hud=preload("res://scripts/hud_canvas.gd")
 const Radar=preload("res://scripts/radar.gd")
@@ -30,10 +45,14 @@ var start_buttons=[]
 var help_label:Label
 var last_driving=false
 var margins=Vector4(18,18,18,18)
+var look_stage:Control
+var vault_panel:PanelContainer
+var vault_buttons=[]
+var vault_names=[]
 func setup(game):
  app=game;root=Control.new();root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);root.mouse_filter=Control.MOUSE_FILTER_IGNORE;add_child(root)
- root.theme=_theme();_menu();_hud();_pause();_gps();_chat();_loading()
- touch=Touch.new();root.add_child(touch);touch.action.connect(_touch_action);touch.visible=false
+ root.theme=_theme();_look_stage();_menu();_vault();_hud();_pause();_gps();_chat();_loading()
+ touch=Touch.new();root.add_child(touch);touch.action.connect(_touch_action);touch.visible=false;touch.set_pad_scale(float(app.prefs.data.control_scale))
  toast=_label(root,"",14,Color("c5dfd1"));toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;toast.mouse_filter=Control.MOUSE_FILTER_IGNORE
  root.resized.connect(_layout);_layout()
 func _theme():
@@ -49,9 +68,29 @@ func _label(parent,text,size=15,color=Color("c9d8db")):
  var l=Label.new();l.text=text;l.add_theme_font_size_override("font_size",size);l.modulate=color;l.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;l.mouse_filter=Control.MOUSE_FILTER_IGNORE;parent.add_child(l);return l
 func _button(parent,text,callback):
  var b=Button.new();b.text=text;b.focus_mode=Control.FOCUS_NONE;b.pressed.connect(callback);parent.add_child(b);return b
+func _look_stage():
+ look_stage=LookStage.new();look_stage.owner_ui=self;look_stage.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);look_stage.mouse_filter=Control.MOUSE_FILTER_IGNORE;root.add_child(look_stage)
+func _vault():
+ vault_panel=_panel(Vector2(430,64),Vector2(420,0))
+ var v=VBoxContainer.new();v.add_theme_constant_override("separation",10);vault_panel.add_child(v)
+ _label(v,"VAULT / SIMPAN LOOK",22,Color("e2f0e7"))
+ _label(v,"Tiga slot tersimpan. Geser karakter di kanan untuk muter 360°.",11,Color("9fd3c2"))
+ for i in range(3):
+  var slot=i
+  var row=HBoxContainer.new();row.add_theme_constant_override("separation",8);v.add_child(row)
+  var apply=_button(row,"SLOT "+str(slot+1)+" · "+LOOK_NAMES[slot],func():app.apply_vault(slot));apply.size_flags_horizontal=Control.SIZE_EXPAND_FILL;vault_buttons.append(apply)
+  _button(row,"SIMPAN",func():app.save_vault(slot))
+ _button(v,"Tutup",func():vault_panel.visible=false)
+ vault_panel.visible=false;refresh_vault()
+func refresh_vault():
+ for i in range(min(3,vault_buttons.size())):
+  var look=0
+  if app and app.prefs.data.vault_looks is Array and i<app.prefs.data.vault_looks.size():look=int(app.prefs.data.vault_looks[i])
+  vault_buttons[i].text="SLOT "+str(i+1)+" · "+LOOK_NAMES[clampi(look,0,LOOK_NAMES.size()-1)]
+const LOOK_NAMES=["Raka","Kai","Atlas","Naya","Luna","Asha"]
 func _menu():
  menu=_panel(Vector2(26,22),Vector2(378,0));var scroll=ScrollContainer.new();scroll.custom_minimum_size=Vector2(334,620);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;menu.add_child(scroll);var v=VBoxContainer.new();v.size_flags_horizontal=Control.SIZE_EXPAND_FILL;v.add_theme_constant_override("separation",11);scroll.add_child(v)
- _label(v,"VEYRA",56,Color("e5ebdd"));_label(v,"N E O N   D I S T R I C T",14,Color("82b9aa"));_label(v,"NATIVE 0.5 / LOMBOK DIRECTION",11,Color("9fd3c2"))
+ _label(v,"VEYRA",56,Color("e5ebdd"));_label(v,"N E O N   D I S T R I C T",14,Color("82b9aa"));_label(v,"NATIVE 0.5.1 / LOMBOK ISLAND",11,Color("9fd3c2"))
  _label(v,"Identitas lo. Distrik lo.",19,Color("e2f0e7"));_label(v,"NAMA WARGA",10)
  name_input=LineEdit.new();name_input.max_length=16;name_input.text=str(app.prefs.data.nickname);name_input.placeholder_text="Nama panggilan";v.add_child(name_input)
  var grid=GridContainer.new();grid.columns=3;v.add_child(grid)
@@ -59,6 +98,8 @@ func _menu():
   var id=i;_button(grid,["Raka","Kai","Atlas","Naya","Luna","Asha"][i],func():app.set_look(id))
  var online=_button(v,"MASUK DISTRIK ONLINE  →",func():app.start_game(true));online.modulate=Color("c2e0b1");start_buttons.append(online)
  start_buttons.append(_button(v,"PROVING GROUND · offline",func():app.start_game(false)))
+ _button(v,"VAULT · simpan / pakai look",func():vault_panel.visible=not vault_panel.visible)
+ _label(v,"Geser karakter di kanan untuk muter 360°.",10,Color("8fb2ad"))
  var q=_quality_selector();v.add_child(q)
  _label(v,"Optimasi anti-crash tetap aktif: render bertahap, mobil dekat saja, dan quality AUTO aman untuk RAM kecil.",11,Color("8fb2ad"))
  _label(v,"WASD gerak · Shift lari · F kendaraan\nMouse kamera · RMB bidik · G GPS · Esc menu",11)
@@ -82,6 +123,11 @@ func _pause():
  _label(v,"DISTRICT / PAUSE",23);_button(v,"Lanjut bermain",func():app.toggle_pause());_button(v,"GPS / tujuan",show_gps);_button(v,"Tegakkan kendaraan",func():app.reset_car());_button(v,"Uji ragdoll · offline",func():app.manual_ragdoll())
  v.add_child(_quality_selector());_label(v,"VOLUME",10)
  var volume=HSlider.new();volume.min_value=0;volume.max_value=1;volume.step=.02;volume.value=float(app.prefs.data.master);volume.value_changed.connect(func(x):app.prefs.data.master=x;app.audio_node.set_volume(x);app.prefs.save());v.add_child(volume)
+ _label(v,"UKURAN TOMBOL SENTUH",10)
+ var pad_scale=HSlider.new();pad_scale.min_value=.85;pad_scale.max_value=1.45;pad_scale.step=.05;pad_scale.value=float(app.prefs.data.control_scale);pad_scale.value_changed.connect(func(x):
+  app.prefs.data.control_scale=x;app.prefs.save()
+  if touch:touch.set_pad_scale(x)
+ );v.add_child(pad_scale)
  _label(v,"SENSITIVITAS KAMERA",10);var look=HSlider.new();look.min_value=.45;look.max_value=1.8;look.step=.05;look.value=float(app.prefs.data.look_sensitivity);look.value_changed.connect(func(x):app.prefs.data.look_sensitivity=x;app.prefs.save());v.add_child(look)
  _button(v,"Salin diagnostik aman",func():app.copy_diagnostics());_button(v,"Kembali ke lobby",func():app.return_lobby());_button(v,"Keluar",func():app.get_tree().quit());pause_panel.visible=false
 func _gps():
@@ -129,9 +175,14 @@ func _layout():
  chat_panel.position=Vector2(left,maxf(110,view.y-390))
  if toast:toast.position=Vector2(view.x*.5-240,70);toast.size=Vector2(480,45)
 func show_menu():
- menu.visible=true;hud.visible=false;touch.visible=false;pause_panel.visible=false;gps_panel.visible=false;chat_panel.visible=false;Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
+ menu.visible=true
+ if look_stage:look_stage.mouse_filter=Control.MOUSE_FILTER_STOP;look_stage.visible=true
+ hud.visible=false;touch.visible=false;pause_panel.visible=false;gps_panel.visible=false;chat_panel.visible=false;Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
 func show_game():
- menu.visible=false;hud.visible=true;touch.visible=touch.enabled;chat_panel.visible=false;_layout()
+ menu.visible=false
+ if look_stage:look_stage.mouse_filter=Control.MOUSE_FILTER_IGNORE;look_stage.visible=false
+ if vault_panel:vault_panel.visible=false
+ hud.visible=true;touch.visible=touch.enabled;chat_panel.visible=false;_layout()
 func show_gps():
  gps_panel.visible=true;pause_panel.visible=false;app.paused=true;touch.reset();touch.visible=false;Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
 func open_chat():

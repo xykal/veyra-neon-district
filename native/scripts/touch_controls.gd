@@ -57,16 +57,17 @@ var buttons={}
 var driving=false
 var safe_margin=Vector2.ZERO
 var bottom_inset=0.0
+var scale_factor=1.08
 func _ready():
  set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);mouse_filter=Control.MOUSE_FILTER_IGNORE
  enabled=OS.has_feature("mobile") or "--touch" in OS.get_cmdline_user_args();visible=enabled
- var specs=[["fire","FIRE",88],["aim","AIM",70],["action","NAIK",76],["jump","JUMP",74],["sprint","RUN",62],["gas","GAS",94],["reverse","REM / R",84],["brake","H-BRAKE",70],["left","",80],["right","",80],["horn","HORN",62],["menu","•••",52],["gps","GPS",52],["chat","CHAT",52]]
+ var specs=[["fire","FIRE",104],["aim","AIM",84],["action","NAIK",90],["jump","JUMP",88],["sprint","RUN",74],["gas","GAS",112],["reverse","REM / R",98],["brake","H-BRAKE",82],["left","",96],["right","",96],["horn","HORN",72],["menu","•••",58],["gps","GPS",58],["chat","CHAT",58]]
  for spec in specs:
   var pad=ActionPad.new();pad.key=spec[0];pad.caption=spec[1];pad.size=Vector2(spec[2],spec[2]);pad.set_meta("base_size",float(spec[2]));pad.changed.connect(_button);add_child(pad);buttons[spec[0]]=pad
  resized.connect(_layout);_layout();_visibility()
 func _layout():
  var w=size.x;var h=size.y
- var base=clampf(minf(w/1280.0,h/720.0),.78,1.18)
+ var base=clampf(minf(w/1280.0,h/720.0),.78,1.18)*scale_factor
  for key in buttons:
   var side=maxf(52.0,float(buttons[key].get_meta("base_size",64.0))*base)
   buttons[key].size=Vector2(side,side)
@@ -83,6 +84,8 @@ func _layout():
   desired.x=clampf(desired.x,6.0,maxf(6.0,w-pad.size.x-6.0))
   desired.y=clampf(desired.y,6.0,maxf(6.0,h-pad.size.y-6.0))
   pad.position=desired
+func set_pad_scale(value):
+ scale_factor=clampf(float(value),.85,1.45);_layout()
 func set_insets(left,right,bottom):
  safe_margin=Vector2(left,right);bottom_inset=bottom;_layout()
 func _visibility():

@@ -21,6 +21,10 @@ var attack_time=0.0
 var ragdoll_prepared=false
 var motion_speed=0.0
 var motion_time=0.0
+var was_airborne=false
+var land_time=0.0
+var angular_lag=0.0
+var prev_yaw=0.0
 var wear_nodes=[]
 func _init():
  pass
@@ -119,7 +123,7 @@ func _add_weapon():
   var mesh=MeshInstance3D.new();var box=BoxMesh.new();box.size=spec[0];mesh.mesh=box;mesh.position=spec[1];mesh.material_override=material;weapon.add_child(mesh)
  muzzle=Marker3D.new();muzzle.position=Vector3(0,.012,.16);weapon.add_child(muzzle);weapon.visible=false
 func fire_animation():
- attack_time=.25;current="";play_motion("Pistol_Shoot")
+ attack_time=.25;current="";play_motion("Pistol_Shoot",1.15)
  if weapon:weapon.visible=true
 func _process(delta):
  attack_time=maxf(0,attack_time-delta)
@@ -127,14 +131,24 @@ func _process(delta):
  if ragdoll:
   if weapon:weapon.visible=false
   return
- # Additive idle/locomotion layer: forward lean, tiny side sway, breathing bob.
+ # Turn-rate lag: body leans into direction changes like GTA-era locomotion.
+ var yaw_now=global_rotation.y
+ var yaw_delta=wrapf(yaw_now-prev_yaw,-PI,PI)
+ prev_yaw=yaw_now
+ angular_lag=lerpf(angular_lag,clampf(-yaw_delta/maxf(delta,0.0001)*.05,-.16,.16),1-exp(-delta*7.0))
+ # Additive idle/locomotion layer: forward lean, side sway, breathing, turn & landing.
  if model:
-  var lean=clampf(motion_speed/6.2,0.0,1.0)*-.055
-  var sway=sin(motion_time*(2.2+motion_speed*.35))*clampf(motion_speed*.012,0.0,.035)
-  var bob=sin(motion_time*(3.1+motion_speed*.55))*clampf(motion_speed*.012,0.0,.03)
+  var run=clampf(motion_speed/6.2,0.0,1.0)
+  var lean=run*-.062-(.012 if not was_airborne and motion_speed<.4 else 0.0)
+  var sway=sin(motion_time*(2.2+motion_speed*.35))*clampf(motion_speed*.012,0.0,.042)
+  var bob=sin(motion_time*(3.1+motion_speed*.55))*clampf(motion_speed*.013,0.0,.034)
+  var breath=sin(motion_time*1.35)*.006*(1.0-run)
+  land_time=maxf(0.0,land_time-delta)
+  var land_dip=-(land_time*land_time)*.55
   model.rotation.x=lerpf(model.rotation.x,lean,1-exp(-delta*6.0))
   model.rotation.z=lerpf(model.rotation.z,sway,1-exp(-delta*5.0))
-  model.position.y=lerpf(model.position.y,bob,1-exp(-delta*5.5))
+  model.rotation.y=lerpf(model.rotation.y,clampf(angular_lag,-.16,.16),1-exp(-delta*4.2))
+  model.position.y=lerpf(model.position.y,bob+breath+land_dip,1-exp(-delta*6.5))
 func _make_ragdoll():
  if ragdoll_prepared:return
  ragdoll_prepared=true
@@ -161,10 +175,12 @@ func play_motion(clip,speed=1.0):
   for candidate in animator.get_animation_list():
    if str(candidate).ends_with(clip):clip=candidate;break
  if animator.has_animation(clip):
-  animator.speed_scale=lerpf(animator.speed_scale,speed,0.35)
-  if current!=clip:animator.play(clip,.22);current=clip
+  animator.speed_scale=lerpf(animator.speed_scale,speed,0.22)
+  if current!=clip:animator.play(clip,.28);current=clip
 func locomotion(speed,sprinting,airborne=false,crouched=false,seated=false,aim=false):
  if ragdoll:return
+ if airborne:was_airborne=true
+ elif was_airborne:was_airborne=false;land_time=.26
  motion_speed=speed
  if weapon:weapon.visible=(aim or attack_time>0) and not seated
  var clip="Idle_Loop"

@@ -85,24 +85,56 @@ func _generate(incremental,progress):
   _commit(entries[i])
   if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.72+.25*float(i)/entries.size(),"Mengunggah batch grafis");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
  batches.clear();built=true;building=false;generation_seconds=(Time.get_ticks_msec()-started)/1000.0;_progress(progress,1.0,"Pulau siap")
+func _poly_contains(poly,x,z):
+ var inside=false
+ for i in range(poly.size()):
+  var a=poly[i];var b=poly[(i+1)%poly.size()]
+  var ax=float(a[0]);var ay=float(a[1]);var bx=float(b[0]);var by=float(b[1])
+  if (ay>z)!=(by>z):
+   var xin=(bx-ax)*(z-ay)/(by-ay+0.00001)+ax
+   if x<xin:inside=not inside
+ return inside
+func _poly_edge(poly,x,z):
+ var best=1e9
+ for i in range(poly.size()):
+  var a=poly[i];var b=poly[(i+1)%poly.size()]
+  var ax=float(a[0]);var ay=float(a[1]);var bx=float(b[0]);var by=float(b[1])
+  var dx=bx-ax;var dy=by-ay
+  var t=clampf(((x-ax)*dx+(z-ay)*dy)/(dx*dx+dy*dy+0.00001),0.0,1.0)
+  best=minf(best,Vector2(x-(ax+t*dx),z-(ay+t*dy)).length())
+ return best
 func height_at(x,z):
- var d=Vector2(x-world_size/2,z-world_size/2).length()
- var inside=x>-24 and x<world_size+24 and z>-24 and z<world_size+24
- if inside:return 0.0
- var h=0.0
- var flat=float(island.get("flatRadius",250.0))
- var t=clampf((d-flat)/(world_size*.85),0.0,1.0)
- h+=t*t*5.5
- for peak in island.get("peaks",[]):
-  var pd=Vector2(x-float(peak.x),z-float(peak.y)).length()
-  var w=exp(-pow(pd/maxf(1.0,float(peak.radius)),2.0))
-  h+=float(peak.height)*w
- for r in island.get("rice",[]):
-  var local=Vector2(x-float(r.x),z-float(r.y)).rotated(-float(r.yaw))
-  var hw=float(r.w)*.5;var hh=float(r.h)*.5
-  if absf(local.x)<hw and absf(local.y)<hh:
-   h+=floorf((local.y+hh)/(2*hh)*float(r.levels))*0.38
- return maxf(h,0.0)
+ var islet_h=-999.0
+ for islet in island.get("islets",[]):
+  var id=Vector2(x-float(islet.x),z-float(islet.y)).length()
+  if id<float(islet.r):islet_h=maxf(islet_h,0.62*(1.0-pow(id/maxf(1.0,float(islet.r)),2.0))+0.04)
+ if islet_h>-900.0:return islet_h
+ var poly=island.get("outline",[])
+ if poly.is_empty():return 0.0
+ var inside=_poly_contains(poly,x,z)
+ var shore=clampf(_poly_edge(poly,x,z)/26.0,0.0,1.0)
+ var h=0.22
+ if inside:
+  for peak in island.get("heights",[]):
+   var pd=Vector2(x-float(peak.x),z-float(peak.y)).length()
+   var pr=maxf(1.0,float(peak.radius))
+   # Volcanic profile with a summit crater (Rinjani/Segara Anak style).
+   h+=float(peak.height)*exp(-pow(pd/pr,2.0))-float(peak.height)*.26*exp(-pow(pd/(pr*.12),2.0))
+  for lake in island.get("lakes",[]):
+   var ld=Vector2(x-float(lake.x),z-float(lake.y)).length()
+   if ld<float(lake.radius):h-=float(lake.depth)*(1.0-ld/float(lake.radius))
+  for r in island.get("rice",[]):
+   var local=Vector2(x-float(r.x),z-float(r.y)).rotated(-float(r.yaw))
+   var hw=float(r.w)*.5;var hh=float(r.h)*.5
+   if absf(local.x)<hw and absf(local.y)<hh:h+=floorf((local.y+hh)/(2*hh)*float(r.levels))*0.34
+  h=lerpf(-0.32,h,shore)
+ else:h=lerpf(-0.42,-3.4,shore)
+ # Soft city apron: shared planar city blends into island relief without cliffs.
+ var ax=absf(x-world_size*.5)-(world_size*.5+24)
+ var az=absf(z-world_size*.5)-(world_size*.5+24)
+ var outside_d=maxf(maxf(ax,az),0.0)
+ var city_blend=1.0-smoothstep(0.0,64.0,outside_d)
+ return lerpf(h,0.0,city_blend)
 func _terrain():
  var geometry=MeshInstance3D.new();geometry.name="TerrainSingleSurface";geometry.set_meta("terrain_surface",true)
  var span=world_size+360.0;var origin=-180.0;var segs=84;var step=span/segs
@@ -176,8 +208,8 @@ func _island_scenery():
    _batch(p+offset+Vector3(0,1.1,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.4,2.2,2.0)),_unit("box"),wood,"hut",Color("b7895f").lightened(.02))
    _batch(p+offset+Vector3(0,2.55,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.9,.22,2.6)),_unit("box"),thatch,"roof",Color("77502f"))
 func _setup_environment():
- environment=WorldEnvironment.new();var e=Environment.new();var sky=Sky.new();var sm=ProceduralSkyMaterial.new();sm.sky_top_color=Color("365a84");sm.sky_horizon_color=Color("aebdc5");sm.ground_bottom_color=Color("27323a");sm.ground_horizon_color=Color("a1adae");sky.sky_material=sm;e.sky=sky;e.background_mode=Environment.BG_SKY;e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("b4c4d2");e.ambient_light_energy=.55;e.tonemap_mode=Environment.TONE_MAPPER_FILMIC;e.fog_enabled=true;e.fog_light_color=Color("99adb7");e.fog_density=.003;e.fog_sky_affect=.35;environment.environment=e;add_child(environment)
- sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-42,-28,0);sun.light_color=Color("ffe6c7");sun.light_energy=1.5;sun.shadow_enabled=quality>0;sun.directional_shadow_max_distance=45 if quality==1 else 75;add_child(sun)
+ environment=WorldEnvironment.new();var e=Environment.new();var sky=Sky.new();var sm=ProceduralSkyMaterial.new();sm.sky_top_color=Color("2c5488");sm.sky_horizon_color=Color("d9c19a");sm.ground_bottom_color=Color("243238");sm.ground_horizon_color=Color("b7a68c");sky.sky_material=sm;e.sky=sky;e.background_mode=Environment.BG_SKY;e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("c6d2dc");e.ambient_light_energy=.62;e.tonemap_mode=Environment.TONE_MAPPER_FILMIC;e.fog_enabled=true;e.fog_light_color=Color("b7c3c9");e.fog_density=.0015;e.fog_sky_affect=.22;environment.environment=e;add_child(environment)
+ sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-42,-28,0);sun.light_color=Color("fff0d2");sun.light_energy=1.65;sun.shadow_enabled=quality>0;sun.directional_shadow_max_distance=45 if quality==1 else 75;add_child(sun)
 func _standard(metal=0.0,rough=.8,emission=Color.BLACK):
  var key=str(metal)+":"+str(rough)+":"+emission.to_html()
  if material_cache.has(key):return material_cache[key]
@@ -214,7 +246,7 @@ func set_quality(tier):
  quality=tier;distance_limit=[65.0,100.0,150.0][tier]
  if sun:sun.shadow_enabled=tier>0;sun.directional_shadow_max_distance=45 if tier==1 else 75
  for node in batch_nodes:node.visibility_range_end=distance_limit;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if tier==0 or node.get_meta("kind") in ["leaves","lamps","red","green","water","frond","grass","rice","shrub"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
- if environment:environment.environment.fog_density=[.0042,.0026,.0016][tier]
+ if environment:environment.environment.fog_density=[.0024,.0016,.0011][tier];environment.environment.fog_sky_affect=.22
 func nearest_poi(point):
  var best=null;var distance=INF
  for p in data.map.pois:
