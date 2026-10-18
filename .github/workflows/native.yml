@@ -43,7 +43,7 @@ jobs:
       - name: Run the exported EXE on Windows
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "dist/native/windows/VeyraNative.exe" -ArgumentList "--headless", "--audio-driver", "Dummy", "--fixed-fps", "60", "--quit-after", "420", "--log-file", "$env:RUNNER_TEMP/veyra-native-smoke.log", "--", "--smoke-test" -Wait -PassThru
+          $p = Start-Process -FilePath "dist/native/windows/VeyraNative.exe" -ArgumentList "--headless", "--audio-driver", "Dummy", "--fixed-fps", "60", "--quit-after", "900", "--log-file", "$env:RUNNER_TEMP/veyra-native-smoke.log", "--", "--smoke-test" -Wait -PassThru
           $log = Get-Content "$env:RUNNER_TEMP/veyra-native-smoke.log" -Raw
           Write-Output $log
           if ($p.ExitCode -ne 0 -or $log -notmatch "NATIVE_APP_SMOKE_PASS" -or $log -match "SCRIPT ERROR|ERROR:") { throw "Exported native Windows smoke failed" }
@@ -124,7 +124,7 @@ jobs:
         run: |
           cd native-release
           sha256sum *.zip *.apk > SHA256SUMS.txt
-          tag=native-v0.4.0-alpha.1
+          tag=native-v0.4.0-alpha.2
           if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'Veyra Native 0.4 — Windows & Android alpha' --notes-file ../native/README.md
           else

@@ -130,7 +130,7 @@ func safe_exit(pawn):
    if ground.is_empty():continue
    point.y=ground.position.y+.04
    var capsule=CapsuleShape3D.new();capsule.radius=.42;capsule.height=1.8
-   var q=PhysicsShapeQueryParameters3D.new();q.shape=capsule;q.transform=Transform3D(Basis.IDENTITY,point+Vector3.UP*.95);q.collision_mask=1|2;q.exclude=[get_rid(),pawn.get_rid()]
+   var q=PhysicsShapeQueryParameters3D.new();q.shape=capsule;q.transform=Transform3D(Basis.IDENTITY,point+Vector3.UP*.95);q.collision_mask=1|2|16;q.exclude=[get_rid(),pawn.get_rid()]
    if state.intersect_shape(q,1).is_empty():return point
  return null
 func reset_upright():

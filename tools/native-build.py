@@ -14,7 +14,7 @@ if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--godot',type=Path,default=os.environ.get('GODOT_BIN'));p.add_argument('--target',choices=['windows','android'],required=True);p.add_argument('--commit',default=os.environ.get('GITHUB_SHA','local'));a=p.parse_args()
     if not a.godot:raise SystemExit('Set GODOT_BIN or pass --godot.')
     out=ROOT/'dist/native';out.mkdir(parents=True,exist_ok=True)
-    (ROOT/'native/assets/build-info.json').write_text(json.dumps({'app':'Veyra Native','version':'0.4.0-alpha.1','commit':a.commit})+'\n')
+    (ROOT/'native/assets/build-info.json').write_text(json.dumps({'app':'Veyra Native','version':'0.4.0-alpha.2','commit':a.commit})+'\n')
     if a.target=='android':
         sdk=os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME');java=os.environ.get('JAVA_HOME')
         if not sdk or not java:raise SystemExit('Set private Android SDK/JDK paths.')

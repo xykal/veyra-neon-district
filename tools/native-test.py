@@ -18,7 +18,8 @@ if __name__=='__main__':
     if r.returncode or 'SCRIPT ERROR' in r.stdout+r.stderr:print((r.stdout+r.stderr)[-8000:]);raise SystemExit('Native import/parse failed.')
     execute(a.godot,['--fixed-fps','60','--script','res://tests/avatar_smoke.gd'],'AVATAR_SMOKE_PASS')
     execute(a.godot,['--fixed-fps','60','--script','res://tests/physics_smoke.gd'],'NATIVE_PHYSICS_PASS')
-    execute(a.godot,['--fixed-fps','60','--quit-after','420','--','--smoke-test'],'NATIVE_APP_SMOKE_PASS')
+    execute(a.godot,['--fixed-fps','60','--script','res://tests/driver_smoke.gd'],'NATIVE_DRIVER_PASS')
+    execute(a.godot,['--fixed-fps','60','--quit-after','900','--','--smoke-test'],'NATIVE_APP_SMOKE_PASS')
     if not a.skip_network:
         with socket.socket() as s:s.bind(('127.0.0.1',0));port=s.getsockname()[1]
         with tempfile.TemporaryDirectory(prefix='veyra-native-test-') as directory:

@@ -20,10 +20,19 @@ func start_loop(key,name,point,volume=-18.0):
  if stream is AudioStreamWAV:stream.loop_mode=AudioStreamWAV.LOOP_FORWARD;stream.loop_begin=0;stream.loop_end=stream.data.size()/2
  p.stream=stream;p.volume_db=volume;p.max_distance=70;p.unit_size=3.0;add_child(p);p.global_position=point;p.play();loops[key]=p;return p
 func stop_loop(key):
- if loops.has(key):loops[key].queue_free();loops.erase(key)
+ if loops.has(key):loops[key].stop();loops[key].stream=null;loops[key].queue_free();loops.erase(key)
 func engine(key,point,speed,throttle,active):
  if not active:stop_loop(key);return
  var p=start_loop(key,"engine_idle",point,-13)
  if p:p.global_position=point;p.pitch_scale=clampf(.85+absf(speed)*.065+absf(throttle)*.3,.8,3.5);p.volume_db=-18+absf(throttle)*5+minf(absf(speed),35)*.12
 func set_volume(master):
  AudioServer.set_bus_volume_db(0,linear_to_db(clampf(master,0.001,1.0)))
+
+func shutdown():
+ for p in pool:
+  if is_instance_valid(p):p.stop();p.stream=null
+ for p in loops.values():
+  if is_instance_valid(p):p.stop();p.stream=null
+ loops.clear();streams.clear()
+func _exit_tree():
+ shutdown()

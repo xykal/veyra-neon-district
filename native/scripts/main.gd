@@ -67,7 +67,7 @@ func _ready():
  elif "--online-test" in OS.get_cmdline_user_args():call_deferred("_online_test")
  elif demo_capture:call_deferred("start_game",false)
  if capture_path!="":call_deferred("_capture")
- print("VEYRA_NATIVE_READY version=0.4.0-alpha renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones; world=",world.data.seed)
+ print("VEYRA_NATIVE_READY version=0.4.0-alpha.2 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones; world=",world.data.seed)
 func _preview():
  preview=Citizen.new();add_child(preview);preview.position=Vector3(-40,0,-40);preview.setup(int(prefs.data.look),quality)
  pedestal=MeshInstance3D.new();var disk=CylinderMesh.new();disk.top_radius=2.2;disk.bottom_radius=2.3;disk.height=.12;disk.radial_segments=48;pedestal.mesh=disk;var mat=StandardMaterial3D.new();mat.albedo_color=Color("1b3e46");mat.roughness=.55;mat.metallic=.25;pedestal.material_override=mat;pedestal.position=preview.position-Vector3.UP*.07;add_child(pedestal)
@@ -317,6 +317,16 @@ func _smoke_test():
  for i in range(60):await get_tree().physics_frame
  # The full renderer/controller test can also be run on an exported EXE, without WebView/browser.
  _check(player.global_position.is_finite(),"controller finite")
+ candidate=_candidate();_check(candidate!=null,"normal spawn vehicle access")
+ if candidate:
+  var car=candidate;interact();_check(player.driving==car,"driver assignment")
+  for i in range(120):await get_tree().physics_frame
+  _check(car.global_position.y>-.2 and car.global_position.y<1.5,"occupied vehicle grounded")
+  _check(car.linear_velocity.length()<3,"driver entry cannot launch vehicle")
+  var point=car.safe_exit(player);_check(point!=null,"safe driver exit")
+  if point!=null:player.exit_vehicle(point)
+  for i in range(12):await get_tree().physics_frame
+  _check(player.driving==null,"driver state clears on exit")
  player.knockdown(Vector3(2,1,0))
  for i in range(180):await get_tree().physics_frame
  _check(player.avatar.physical.size()>=11,"physical bone bodies")

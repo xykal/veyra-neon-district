@@ -93,7 +93,7 @@ func _make_ragdoll():
  if bone_count>11:specs.append_array([["hand_l",.04,.12,.5],["hand_r",.04,.12,.5],["foot_l",.06,.16,.9],["foot_r",.06,.16,.9]])
  for spec in specs:
   var id=skeleton.find_bone(spec[0]);if id<0:continue
-  var b=PhysicalBone3D.new();b.name="Physical_"+spec[0];simulator.add_child(b);b.set("bone_name",spec[0]);b.mass=spec[3];b.friction=.7;b.bounce=.05;b.collision_layer=8;b.collision_mask=1|2
+  var b=PhysicalBone3D.new();b.name="Physical_"+spec[0];simulator.add_child(b);b.set("bone_name",spec[0]);b.mass=spec[3];b.friction=.7;b.bounce=.05;b.collision_layer=0;b.collision_mask=0
   var offset=Transform3D.IDENTITY;offset.origin=Vector3(0,spec[2]*.45,0);b.body_offset=offset
   var joint=Transform3D.IDENTITY;joint.origin=-offset.origin;b.joint_offset=joint
   var hinge="lowerarm" in spec[0] or "calf" in spec[0]
@@ -131,10 +131,11 @@ func start_ragdoll(impulse=Vector3.ZERO):
  ragdoll=true
  if animator:animator.stop(true)
  simulator.physical_bones_start_simulation()
- for b in physical:b.linear_velocity=impulse.limit_length(8);b.angular_velocity=Vector3(.3,.15,.4)
+ for b in physical:b.collision_layer=8;b.collision_mask=1|2;b.linear_velocity=impulse.limit_length(8);b.angular_velocity=Vector3(.3,.15,.4)
 func stop_ragdoll():
  if not ragdoll:return
  simulator.physical_bones_stop_simulation();ragdoll=false
+ for b in physical:b.collision_layer=0;b.collision_mask=0
  for i in range(skeleton.get_bone_count()):skeleton.set_bone_pose_position(i,rest_positions[i]);skeleton.set_bone_pose_rotation(i,rest_rotations[i])
  current="";play_motion("Idle_Loop")
 func body_position():

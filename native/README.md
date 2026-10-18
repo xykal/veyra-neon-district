@@ -1,13 +1,17 @@
-# Veyra Native — 0.4.0-alpha.1
+# Veyra Native — 0.4.0-alpha.2
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.4.0-alpha.1)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.4.0-alpha.2)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
+
+## Alpha.2 correction
+
+Inactive physical-bone colliders are disabled until ragdoll simulation actually starts. Driver entry immediately disables the capsule and registers a vehicle/player collision exception, preventing an occupied car from receiving phantom self-collision energy. Native tests now include entering a normal spawned car, leaving it idle on its suspension and safely exiting in the complete city. The exported Windows boot test also exercises that integration path. Audio players explicitly stop/release playback resources at shutdown.
 
 ## What is actually new
 

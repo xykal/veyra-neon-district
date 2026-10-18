@@ -73,10 +73,11 @@ func _physics_process(delta):
  pivot.rotation=Vector3(-camera_pitch,-camera_yaw-PI/2,0)
  if camera.current and avatar and not avatar.ragdoll and driving==null:avatar.visible=spring.get_hit_length()>.65
 func enter_vehicle(car):
- driving=car;collision.set_deferred("disabled",true);car.driver=1;car.freeze=online
+ driving=car;collision.disabled=true;car.add_collision_exception_with(self);add_collision_exception_with(car);car.driver=1;car.freeze=online
  spring.add_excluded_object(car.get_rid());velocity=Vector3.ZERO
 func exit_vehicle(point):
- if driving:spring.remove_excluded_object(driving.get_rid());driving.driver=0
+ if driving:
+  spring.remove_excluded_object(driving.get_rid());driving.driver=0;driving.remove_collision_exception_with(self);remove_collision_exception_with(driving)
  driving=null;global_position=point;avatar.position=Vector3.ZERO;avatar.visible=true;collision.set_deferred("disabled",false);velocity=Vector3.ZERO
 func knockdown(impulse=Vector3.ZERO,seconds=2.7):
  if driving:return
