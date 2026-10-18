@@ -37,11 +37,11 @@ func setup(game):
  toast=_label(root,"",14,Color("c5dfd1"));toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;toast.mouse_filter=Control.MOUSE_FILTER_IGNORE
  root.resized.connect(_layout);_layout()
 func _theme():
- var theme=Theme.new();theme.default_font_size=15
- var panel=StyleBoxFlat.new();panel.bg_color=Color("0c1926f2");panel.border_color=Color("2b454d");panel.set_border_width_all(1);panel.set_corner_radius_all(14);panel.content_margin_left=22;panel.content_margin_right=22;panel.content_margin_top=20;panel.content_margin_bottom=20;theme.set_stylebox("panel","PanelContainer",panel)
- var normal=StyleBoxFlat.new();normal.bg_color=Color("17303b");normal.border_color=Color("35545c");normal.set_border_width_all(1);normal.set_corner_radius_all(7);normal.content_margin_left=14;normal.content_margin_right=14;normal.content_margin_top=11;normal.content_margin_bottom=11;theme.set_stylebox("normal","Button",normal)
- var hover=normal.duplicate();hover.bg_color=Color("294b50");hover.border_color=Color("84b9a9");theme.set_stylebox("hover","Button",hover)
- var pressed=normal.duplicate();pressed.bg_color=Color("396454");theme.set_stylebox("pressed","Button",pressed)
+ var theme=Theme.new();theme.default_font_size=16
+ var panel=StyleBoxFlat.new();panel.bg_color=Color("0b1c2af4");panel.border_color=Color("3d6f74");panel.set_border_width_all(1);panel.set_corner_radius_all(14);panel.content_margin_left=22;panel.content_margin_right=22;panel.content_margin_top=20;panel.content_margin_bottom=20;theme.set_stylebox("panel","PanelContainer",panel)
+ var normal=StyleBoxFlat.new();normal.bg_color=Color("1c3d48");normal.border_color=Color("4c807d");normal.set_border_width_all(1);normal.set_corner_radius_all(7);normal.content_margin_left=14;normal.content_margin_right=14;normal.content_margin_top=11;normal.content_margin_bottom=11;theme.set_stylebox("normal","Button",normal)
+ var hover=normal.duplicate();hover.bg_color=Color("2f5c5c");hover.border_color=Color("9ad5bd");theme.set_stylebox("hover","Button",hover)
+ var pressed=normal.duplicate();pressed.bg_color=Color("427a63");theme.set_stylebox("pressed","Button",pressed)
  return theme
 func _panel(pos,minimum=Vector2(350,0)):
  var p=PanelContainer.new();p.position=pos;p.custom_minimum_size=minimum;root.add_child(p);return p
@@ -51,8 +51,8 @@ func _button(parent,text,callback):
  var b=Button.new();b.text=text;b.focus_mode=Control.FOCUS_NONE;b.pressed.connect(callback);parent.add_child(b);return b
 func _menu():
  menu=_panel(Vector2(26,22),Vector2(378,0));var scroll=ScrollContainer.new();scroll.custom_minimum_size=Vector2(334,620);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;menu.add_child(scroll);var v=VBoxContainer.new();v.size_flags_horizontal=Control.SIZE_EXPAND_FILL;v.add_theme_constant_override("separation",11);scroll.add_child(v)
- _label(v,"VEYRA",56,Color("e5ebdd"));_label(v,"N E O N   D I S T R I C T",14,Color("82b9aa"));_label(v,"NATIVE 0.4.1 / PERFORMANCE EDITION",10,Color("8ba8b1"))
- _label(v,"Identitas lo. Distrik lo.",18,Color("d1dfd6"));_label(v,"NAMA WARGA",10)
+ _label(v,"VEYRA",56,Color("e5ebdd"));_label(v,"N E O N   D I S T R I C T",14,Color("82b9aa"));_label(v,"NATIVE 0.5 / LOMBOK DIRECTION",11,Color("9fd3c2"))
+ _label(v,"Identitas lo. Distrik lo.",19,Color("e2f0e7"));_label(v,"NAMA WARGA",10)
  name_input=LineEdit.new();name_input.max_length=16;name_input.text=str(app.prefs.data.nickname);name_input.placeholder_text="Nama panggilan";v.add_child(name_input)
  var grid=GridContainer.new();grid.columns=3;v.add_child(grid)
  for i in range(6):
@@ -60,10 +60,10 @@ func _menu():
  var online=_button(v,"MASUK DISTRIK ONLINE  →",func():app.start_game(true));online.modulate=Color("c2e0b1");start_buttons.append(online)
  start_buttons.append(_button(v,"PROVING GROUND · offline",func():app.start_game(false)))
  var q=_quality_selector();v.add_child(q)
- _label(v,"Aman untuk mulai: tanpa shadow, render bertahap, mobil dekat saja. Model karakter tetap ber-rig asli.",11,Color("7895a2"))
+ _label(v,"Optimasi anti-crash tetap aktif: render bertahap, mobil dekat saja, dan quality AUTO aman untuk RAM kecil.",11,Color("8fb2ad"))
  _label(v,"WASD gerak · Shift lari · F kendaraan\nMouse kamera · RMB bidik · G GPS · Esc menu",11)
  _button(v,"Diagnostik / salin laporan",func():app.copy_diagnostics());_button(v,"Tentang / lisensi",show_credits)
- _label(v,"Native alpha: online masih server planar. Voice dan parity wardrobe belum penuh.",10,Color("a89f85"))
+ _label(v,"Native alpha: online masih server planar. Peta Lombok penuh menyusul; shell pulau sudah aktif.",10,Color("b8b592"))
 func _quality_selector():
  var q=OptionButton.new();q.add_item("AUTO · mulai aman");q.add_item("SAFE · hemat GPU");q.add_item("BALANCED");q.add_item("HIGH · pilih manual");q.select(int(app.prefs.data.quality)+1);q.item_selected.connect(func(i):app.set_quality(i-1));return q
 func _hud():
@@ -98,10 +98,10 @@ func _loading():
  loading_view=Control.new();loading_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.mouse_filter=Control.MOUSE_FILTER_STOP;root.add_child(loading_view)
  var background=ColorRect.new();background.color=Color("07111f");background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.add_child(background)
  var v=VBoxContainer.new();v.position=Vector2(390,280);v.custom_minimum_size=Vector2(500,0);v.add_theme_constant_override("separation",15);loading_view.add_child(v)
- _label(v,"VEYRA / DISTRICT LOADER",25,Color("d4e6d4"));loading_label=_label(v,"Menyiapkan distrik…",13,Color("8ba9b6"))
+ _label(v,"VEYRA / LOMBOK LOADER",25,Color("d9f1de"));loading_label=_label(v,"Menyiapkan distrik…",13,Color("8ba9b6"))
  loading_bar=ProgressBar.new();loading_bar.max_value=1;loading_bar.show_percentage=false;loading_bar.custom_minimum_size=Vector2(500,5)
  var fill=StyleBoxFlat.new();fill.bg_color=Color("a5d4b3");fill.set_corner_radius_all(3);loading_bar.add_theme_stylebox_override("fill",fill);v.add_child(loading_bar)
- _label(v,"Memuat bertahap. Jangan hapus data aplikasi untuk update.",10,Color("627f91"));loading_view.visible=false
+ _label(v,"Memuat bertahap. Jangan hapus data aplikasi untuk update.",10,Color("7ba09c"));loading_view.visible=false
 func set_loading(value,progress,text):
  busy=value;loading_view.visible=value;loading_bar.value=progress;loading_label.text=text
  for b in start_buttons:b.disabled=value

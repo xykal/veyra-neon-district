@@ -28,7 +28,7 @@ These are **not** Mixamo assets, photogrammetry/scanned humans or a paid Pro/Sou
 
 ### Veyra modifications
 
-`tools/native-prepare-assets.py` embeds/downsamples maps to 512 px, adds original weighted garment meshes and retargets selected animations into the body skeleton. `tools/native-hair.py` bakes the CC0 hairstyles to head-local attachment space. `tools/native-mask-covered.py` removes only inner skin faces hidden by every shipped opaque garment, offline, while preserving the full skeleton and visible anatomy. The original modifications/tooling are MIT; the underlying Quaternius work remains CC0. Source preparation tools need NumPy/Pillow, but packaged games do not.
+`tools/native-prepare-assets.py` embeds/downsamples maps to 512 px, adds original weighted garment meshes and retargets selected animations into the body skeleton. `tools/native-hair.py` bakes the CC0 hairstyles to head-local attachment space. `tools/native-mask-covered.py` removes only inner skin faces hidden by every shipped opaque garment, offline, while preserving the full skeleton and visible anatomy. `tools/native-fashion.py` applies the 0.5 baggy/oversized streetwear silhouette pass to garment POSITION bytes only. `tools/native-lombok-map.py` generates the expandable Lombok-inspired island shell data. The original modifications/tooling are MIT; the underlying Quaternius work remains CC0. Source preparation tools need NumPy/Pillow, but packaged games do not.
 
 ## Vehicles
 
@@ -36,6 +36,6 @@ Kenney Car Kit, CC0. https://kenney.nl/assets/car-kit . Existing model credits a
 
 ## Original audio / other code
 
-Seventeen seeded DSP-generated mono WAV sources are authored by Veyra contributors with `tools/native-audio.py`, MIT. They contain no samples from GTA, commercial music, recorded voice or third-party sound libraries. `assets/audio/manifest.json` records hashes/loop metadata.
+Thirty-eight seeded DSP-generated mono WAV sources are authored by Veyra contributors with `tools/native-audio.py`, MIT. They contain no samples from GTA, commercial music, recorded voice or third-party sound libraries. `assets/audio/manifest.json` records hashes/loop metadata.
 
-Native gameplay scripts, UI, world-surface shaders, original pistol geometry, generated city conversion and build/test tools: MIT under the repository LICENSE.
+Native gameplay scripts, UI, world-surface shaders (terrain/ocean/facade), original pistol geometry, generated city conversion, island shell tooling and build/test tools: MIT under the repository LICENSE. `assets/boot_splash.png` and `assets/icon_native.png` are original generated/branded Veyra art, not Godot branding.

@@ -124,9 +124,9 @@ jobs:
         run: |
           cd native-release
           sha256sum *.zip *.apk > SHA256SUMS.txt
-          tag=native-v0.4.1-alpha.1
+          tag=native-v0.5.0-alpha.1
           if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'Veyra Native 0.4.1 — Android performance & HUD alpha' --notes-file ../native/README.md
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'Veyra Native 0.5.0 — Lombok Direction alpha' --notes-file ../native/README.md
           else
             existing=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json targetCommitish --jq '.targetCommitish')
             if [ "$existing" != "$GITHUB_SHA" ]; then

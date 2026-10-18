@@ -19,6 +19,9 @@ var weapon:Node3D
 var muzzle:Marker3D
 var attack_time=0.0
 var ragdoll_prepared=false
+var motion_speed=0.0
+var motion_time=0.0
+var wear_nodes=[]
 func _init():
  pass
 func setup(preset=0,quality=1):
@@ -48,6 +51,7 @@ func setup(preset=0,quality=1):
  model.scale=shapes[look]
  _add_hair()
  _add_weapon()
+ _add_streetwear()
  current="";play_motion("Idle_Loop")
  if animator:animator.seek(0,true)
 func _find(root,kind):
@@ -71,6 +75,36 @@ func _add_hair():
   if node is MeshInstance3D:
    for surface in range(node.mesh.get_surface_count()):
     var source=node.mesh.surface_get_material(surface);var m=source.duplicate() if source else StandardMaterial3D.new();m.albedo_color=Color("30231d") if look!=5 else Color("714c2e");m.roughness=.85;node.set_surface_override_material(surface,m)
+func _add_streetwear():
+ if skeleton==null:return
+ var skin=StandardMaterial3D.new();skin.albedo_color=Color("d9b08c");skin.roughness=.9
+ var metal=StandardMaterial3D.new();metal.albedo_color=Color("d8c27a");metal.metallic=.8;metal.roughness=.28
+ var fabric=StandardMaterial3D.new();fabric.albedo_color=COATS[look].darkened(.12);fabric.roughness=.92
+ var denim=StandardMaterial3D.new();denim.albedo_color=Color("2b3a52");denim.roughness=.88
+ var attach_names={"Head":"cap","spine_03":"bag","thigh_l":"pocket_l","thigh_r":"pocket_r","calf_l":"cuff_l","calf_r":"cuff_r"}
+ for bone in attach_names:
+  var id=skeleton.find_bone(bone)
+  if id<0:continue
+  var attachment=BoneAttachment3D.new();attachment.bone_name=bone;skeleton.add_child(attachment)
+  var tag=attach_names[bone]
+  if tag=="cap" and look in [0,2,5]:
+   var cap=MeshInstance3D.new();var crown=CylinderMesh.new();crown.top_radius=.16;crown.bottom_radius=.17;crown.height=.12;cap.mesh=crown;cap.position=Vector3(0,.16,0);cap.material_override=fabric;attachment.add_child(cap)
+   var brim=MeshInstance3D.new();var box=BoxMesh.new();box.size=Vector3(.28,.03,.18);brim.mesh=box;brim.position=Vector3(0,.13,.16);brim.material_override=fabric;attachment.add_child(brim)
+   wear_nodes.append_array([cap,brim])
+  elif tag=="bag" and look in [1,3,5]:
+   var bag=MeshInstance3D.new();var box=BoxMesh.new();box.size=Vector3(.34,.22,.12);bag.mesh=box;bag.position=Vector3(.12,-.05,.18);bag.rotation_degrees=Vector3(0,0,-18);bag.material_override=denim;attachment.add_child(bag)
+   var strap=MeshInstance3D.new();var strap_mesh=BoxMesh.new();strap_mesh.size=Vector3(.05,.5,.03);strap.mesh=strap_mesh;strap.position=Vector3(-.05,.16,.12);strap.rotation_degrees=Vector3(0,0,-28);strap.material_override=denim;attachment.add_child(strap)
+   wear_nodes.append_array([bag,strap])
+  elif tag.begins_with("pocket") and look in [0,2,4,5]:
+   var pocket=MeshInstance3D.new();var box=BoxMesh.new();box.size=Vector3(.16,.22,.09);pocket.mesh=box;pocket.position=Vector3(.16 if tag=="pocket_r" else -.16,-.02,.12);pocket.material_override=denim;attachment.add_child(pocket)
+   wear_nodes.append(pocket)
+  elif tag.begins_with("cuff") and look in [0,1,2,3,5]:
+   var cuff=MeshInstance3D.new();var band=CylinderMesh.new();band.top_radius=.085;band.bottom_radius=.095;band.height=.10;cuff.mesh=band;cuff.position=Vector3(0,-.08,0);cuff.material_override=denim;attachment.add_child(cuff)
+   wear_nodes.append(cuff)
+ # simple chain at neck for the louder looks
+ if look in [2,3,4] and skeleton.find_bone("neck_01")>=0:
+  var attachment=BoneAttachment3D.new();attachment.bone_name="neck_01";skeleton.add_child(attachment)
+  var chain=MeshInstance3D.new();var torus=SphereMesh.new();torus.radius=.075;torus.height=.04;chain.mesh=torus;chain.position=Vector3(0,-.13,.10);chain.scale=Vector3(1.2,.35,1.2);chain.material_override=metal;attachment.add_child(chain);wear_nodes.append(chain)
 func _add_weapon():
  if animator==null:return
  animator.play("Pistol_Aim_Neutral");animator.seek(.1,true);skeleton.force_update_all_bone_transforms()
@@ -89,7 +123,18 @@ func fire_animation():
  if weapon:weapon.visible=true
 func _process(delta):
  attack_time=maxf(0,attack_time-delta)
- if ragdoll and weapon:weapon.visible=false
+ motion_time+=delta
+ if ragdoll:
+  if weapon:weapon.visible=false
+  return
+ # Additive idle/locomotion layer: forward lean, tiny side sway, breathing bob.
+ if model:
+  var lean=clampf(motion_speed/6.2,0.0,1.0)*-.055
+  var sway=sin(motion_time*(2.2+motion_speed*.35))*clampf(motion_speed*.012,0.0,.035)
+  var bob=sin(motion_time*(3.1+motion_speed*.55))*clampf(motion_speed*.012,0.0,.03)
+  model.rotation.x=lerpf(model.rotation.x,lean,1-exp(-delta*6.0))
+  model.rotation.z=lerpf(model.rotation.z,sway,1-exp(-delta*5.0))
+  model.position.y=lerpf(model.position.y,bob,1-exp(-delta*5.5))
 func _make_ragdoll():
  if ragdoll_prepared:return
  ragdoll_prepared=true
@@ -116,10 +161,11 @@ func play_motion(clip,speed=1.0):
   for candidate in animator.get_animation_list():
    if str(candidate).ends_with(clip):clip=candidate;break
  if animator.has_animation(clip):
-  animator.speed_scale=speed
-  if current!=clip:animator.play(clip,.16);current=clip
+  animator.speed_scale=lerpf(animator.speed_scale,speed,0.35)
+  if current!=clip:animator.play(clip,.22);current=clip
 func locomotion(speed,sprinting,airborne=false,crouched=false,seated=false,aim=false):
  if ragdoll:return
+ motion_speed=speed
  if weapon:weapon.visible=(aim or attack_time>0) and not seated
  var clip="Idle_Loop"
  if seated:clip="Driving_Loop"
@@ -130,7 +176,7 @@ func locomotion(speed,sprinting,airborne=false,crouched=false,seated=false,aim=f
  elif sprinting and speed>3.8:clip="Sprint_Loop"
  elif speed>1.8:clip="Jog_Fwd_Loop"
  elif speed>.15:clip="Walk_Loop"
- play_motion(clip,clampf(speed/3,.85,1.15) if clip=="Jog_Fwd_Loop" else 1.0)
+ play_motion(clip,clampf(speed/3.15,.86,1.22) if clip in ["Jog_Fwd_Loop","Walk_Loop","Sprint_Loop"] else 1.0)
 func start_ragdoll(impulse=Vector3.ZERO):
  if ragdoll:return
  if not ragdoll_prepared:_make_ragdoll()

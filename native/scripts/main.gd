@@ -93,7 +93,7 @@ func _ready():
  elif "--online-test" in OS.get_cmdline_user_args():call_deferred("_online_test")
  elif demo_capture:call_deferred("start_game",false)
  if capture_path!="":call_deferred("_capture")
- print("VEYRA_NATIVE_READY version=0.4.1-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones; world=",world.data.seed)
+ print("VEYRA_NATIVE_READY version=0.5.0-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/38-sfx; world=",world.data.seed)
 func _preview():
  preview=Citizen.new();add_child(preview);preview.position=Vector3(-40,0,-40);preview.setup(int(prefs.data.look),quality)
  pedestal=MeshInstance3D.new();var disk=CylinderMesh.new();disk.top_radius=2.2;disk.bottom_radius=2.3;disk.height=.12;disk.radial_segments=48;pedestal.mesh=disk;var mat=StandardMaterial3D.new();mat.albedo_color=Color("1b3e46");mat.roughness=.55;mat.metallic=.25;pedestal.material_override=mat;pedestal.position=preview.position-Vector3.UP*.07;add_child(pedestal)
@@ -106,7 +106,7 @@ func set_quality(value,save=true):
  prefs.data.quality=clampi(value,-1,2);quality=prefs.tier();quality_spec=Preferences.PRESETS[quality]
  if save:prefs.save()
  Engine.max_fps=int(quality_spec.fps);adaptive_scale=float(quality_spec.scale);get_viewport().scaling_3d_scale=adaptive_scale;get_viewport().mesh_lod_threshold=3.0 if quality==0 else 1.5
- get_viewport().msaa_3d=Viewport.MSAA_DISABLED if quality==0 else Viewport.MSAA_2X
+ get_viewport().msaa_3d=Viewport.MSAA_DISABLED if quality==0 else (Viewport.MSAA_2X if quality==1 else Viewport.MSAA_4X)
  if player:player.camera.far=float(quality_spec.distance)+25
  if world:world.set_quality(quality)
  if ui and save:ui.notify(str(quality_spec.name)+" · tidak menjamin FPS semua perangkat")
@@ -182,7 +182,7 @@ func start_game(use_online):
  _loading_progress(.98,"Menuntaskan frame pertama")
  await get_tree().process_frame
  loading=false;playing=true;Engine.max_fps=int(quality_spec.fps);ui.set_loading(false,1,"Siap");ui.show_game();Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if ui.touch.enabled else Input.MOUSE_MODE_CAPTURED
- audio_node.start_loop("ambient","wind",player.global_position,-32)
+ audio_node.set_ambient(player.global_position,"coast")
  if online:network.join();ui.notify("Online · shared server")
  else:ui.notify("Distrik siap. Dekati pintu mobil untuk masuk.")
  job_point=Vector3(world.data.map.pois[0].x/10.0,0,world.data.map.pois[0].y/10.0);_record_diagnostics("playing")
@@ -199,7 +199,7 @@ func return_lobby():
  for actor in remote.values():actor.queue_free()
  remote.clear();network_vehicle_pending.clear();network_me={};active_ragdolls.clear();destination=null
  if route_node:route_node.queue_free();route_node=null
- audio_node.stop_loop("player-engine");audio_node.stop_loop("ambient");ui.touch.reset();ui.set_loading(false,1,"");ui.show_menu();_record_diagnostics("lobby")
+ audio_node.stop_loop("player-engine");audio_node.stop_loop("ambient");audio_node.stop_loop("ambient_ocean");audio_node.stop_loop("ambient_wind");audio_node.stop_loop("ambient_birds");ui.touch.reset();ui.set_loading(false,1,"");ui.show_menu();_record_diagnostics("lobby")
 func toggle_pause():
  if not playing:return
  paused=not paused;ui.pause_panel.visible=paused;ui.gps_panel.visible=false;Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if paused or ui.touch.enabled else Input.MOUSE_MODE_CAPTURED;ui.touch.reset();ui.touch.visible=ui.touch.enabled and not paused
@@ -466,7 +466,7 @@ func _check(value,label):
  if not value:native_failures+=1;push_error("NATIVE_ASSERT_FAILED "+label)
 
 func diagnostic_data():
- return {"app":"Veyra Native","version":"0.4.1-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
+ return {"app":"Veyra Native","version":"0.5.0-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
 func _record_diagnostics(stage):
  load_stage=stage
  var file=FileAccess.open("user://diagnostics.json",FileAccess.WRITE)

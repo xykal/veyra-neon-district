@@ -1,6 +1,8 @@
 extends Node3D
-# One terrain surface + instanced facades. No stacked road planes or coplanar window boxes.
+# One terrain surface + instanced facades + Lombok-inspired island shell.
+# City collision stays planar/shared; scenery outside the shell is visual-first.
 var data={}
+var island={}
 var batches={}
 var batch_nodes=[]
 var solids=[]
@@ -22,6 +24,9 @@ const CHUNK=40.0
 func prepare(tier=0):
  quality=tier;distance_limit=[65.0,100.0,150.0][tier]
  if data.is_empty():data=JSON.parse_string(FileAccess.get_file_as_string("res://assets/district.json"));world_size=float(data.map.size)/10.0
+ if island.is_empty():
+  var raw=FileAccess.get_file_as_string("res://assets/island.json")
+  if raw!="":island=JSON.parse_string(raw)
  if environment==null:_setup_environment()
 func build(tier=0):
  if built:return
@@ -34,18 +39,20 @@ func _progress(callback,value,text):
 func _generate(incremental,progress):
  if building:return
  building=true;var started=Time.get_ticks_msec();var slice_started=Time.get_ticks_usec();var m=data.map
- _terrain();_progress(progress,.08,"Menyiapkan permukaan jalan")
+ _terrain();_progress(progress,.06,"Menyiapkan pulau dan jalan")
+ if incremental:await get_tree().process_frame
+ _island_scenery();_progress(progress,.16,"Menanam pantai, sawah, dan warung")
  if incremental:await get_tree().process_frame
  var facade=ShaderMaterial.new();facade.shader=load("res://assets/shaders/facade.gdshader")
  var total=m.buildings.size()
  for i in range(total):
   var b=m.buildings[i];var h=maxf(1.4,float(b.height)*.8);var pos=Vector3((b.x+b.w/2)/10,h/2,(b.y+b.h/2)/10);var size=Vector3(b.w/10.0,h,b.h/10.0)
   _box(pos,size,facade,"facade",Color(b.color).lightened(.045));_collision_box(pos,size)
-  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.08+.34*float(i)/total,"Menyiapkan blok kota");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
+  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.18+.30*float(i)/total,"Menyiapkan blok kota");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
  var trunk=_standard(0,.95);var leaves=_standard(0,.95)
  for i in range(m.trees.size()):
   _tree(m.trees[i],trunk,leaves)
-  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.47,"Menyiapkan vegetasi");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
+  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.52,"Menyiapkan vegetasi");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
  var metal=_standard(.55,.55);var wood=_standard(0,.86);var lamp=_standard(0,.25,Color("c5b06d")*.45)
  for i in range(m.props.size()):
   var p=m.props[i];var pos=Vector3(float(p.x)/10,0,float(p.y)/10)
@@ -55,7 +62,7 @@ func _generate(incremental,progress):
   elif p.type=="bench":
    _box(pos+Vector3(0,.46,0),Vector3(2,.11,.6),wood,"wood",Color("70513a"),-float(p.get("a",0)));_collision_box(pos+Vector3(0,.4,0),Vector3(2,.8,.6),-float(p.get("a",0)))
    for x in [-.75,.75]:_box(pos+Vector3(x,.22,0),Vector3(.09,.44,.4),metal,"metal",Color("414d51"))
-  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.57,"Menyiapkan objek jalan");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
+  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.60,"Menyiapkan objek jalan");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
  var dark=_standard(.2,.65);var red=_standard(0,.4,Color("b33226")*.3);var green=_standard(0,.4,Color("258559")*.3)
  for i in range(9):
   for j in range(9):
@@ -72,21 +79,102 @@ func _generate(incremental,progress):
    var p1=pos+Vector3(edge*size.x/2,.6,0);var p2=pos+Vector3(0,.6,edge*size.z/2)
    _box(p1,Vector3(.08,1.2,size.z),metal,"fence",Color("414d51"));_collision_box(p1,Vector3(.08,1.2,size.z))
    _box(p2,Vector3(size.x,1.2,.08),metal,"fence",Color("414d51"));_collision_box(p2,Vector3(size.x,1.2,.08))
- _progress(progress,.7,"Menggabungkan render kota")
+ _progress(progress,.72,"Menggabungkan render kota")
  var entries=batches.values()
  for i in range(entries.size()):
   _commit(entries[i])
-  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.7+.25*float(i)/entries.size(),"Mengunggah batch grafis");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
- batches.clear();built=true;building=false;generation_seconds=(Time.get_ticks_msec()-started)/1000.0;_progress(progress,1.0,"Kota siap")
+  if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.72+.25*float(i)/entries.size(),"Mengunggah batch grafis");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
+ batches.clear();built=true;building=false;generation_seconds=(Time.get_ticks_msec()-started)/1000.0;_progress(progress,1.0,"Pulau siap")
+func height_at(x,z):
+ var d=Vector2(x-world_size/2,z-world_size/2).length()
+ var inside=x>-24 and x<world_size+24 and z>-24 and z<world_size+24
+ if inside:return 0.0
+ var h=0.0
+ var flat=float(island.get("flatRadius",250.0))
+ var t=clampf((d-flat)/(world_size*.85),0.0,1.0)
+ h+=t*t*5.5
+ for peak in island.get("peaks",[]):
+  var pd=Vector2(x-float(peak.x),z-float(peak.y)).length()
+  var w=exp(-pow(pd/maxf(1.0,float(peak.radius)),2.0))
+  h+=float(peak.height)*w
+ for r in island.get("rice",[]):
+  var local=Vector2(x-float(r.x),z-float(r.y)).rotated(-float(r.yaw))
+  var hw=float(r.w)*.5;var hh=float(r.h)*.5
+  if absf(local.x)<hw and absf(local.y)<hh:
+   h+=floorf((local.y+hh)/(2*hh)*float(r.levels))*0.38
+ return maxf(h,0.0)
 func _terrain():
- var geometry=MeshInstance3D.new();geometry.name="TerrainSingleSurface";geometry.set_meta("terrain_surface",true);var plane=PlaneMesh.new();plane.size=Vector2(world_size+80,world_size+80);geometry.mesh=plane;geometry.position=Vector3(world_size/2,0,world_size/2)
- var mat=ShaderMaterial.new();mat.shader=load("res://assets/shaders/terrain.gdshader")
+ var geometry=MeshInstance3D.new();geometry.name="TerrainSingleSurface";geometry.set_meta("terrain_surface",true)
+ var span=world_size+360.0;var origin=-180.0;var segs=84;var step=span/segs
+ var verts=PackedVector3Array();var norms=PackedVector3Array();var uvs=PackedVector2Array();var indices=PackedInt32Array()
+ for iz in range(segs+1):
+  for ix in range(segs+1):
+   var x=origin+ix*step;var z=origin+iz*step;var y=height_at(x,z)
+   verts.append(Vector3(x,y,z))
+   var n=Vector3(height_at(x-step,z)-height_at(x+step,z),2*step,height_at(x,z-step)-height_at(x,z+step)).normalized()
+   norms.append(n);uvs.append(Vector2(x,z)*0.04)
+ for iz in range(segs):
+  for ix in range(segs):
+   var a=iz*(segs+1)+ix;var b=a+1;var c=a+segs+1;var d=c+1
+   indices.append_array(PackedInt32Array([a,c,b,b,c,d]))
+ var arrays=[];arrays.resize(Mesh.ARRAY_MAX);arrays[Mesh.ARRAY_VERTEX]=verts;arrays[Mesh.ARRAY_NORMAL]=norms;arrays[Mesh.ARRAY_TEX_UV]=uvs;arrays[Mesh.ARRAY_INDEX]=indices
+ var mesh=ArrayMesh.new();mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays);geometry.mesh=mesh
+ var mat=ShaderMaterial.new();mat.shader=load("res://assets/shaders/terrain.gdshader");mat.set_shader_parameter("flat_radius",float(island.get("flatRadius",250.0)));mat.set_shader_parameter("world_center",Vector2(world_size/2,world_size/2))
  var image=Image.create_empty(64,64,false,Image.FORMAT_RGB8);var rng=RandomNumberGenerator.new();rng.seed=192040
  for y in range(64):
   for x in range(64):
    var n=rng.randf();image.set_pixel(x,y,Color(n,n,n))
  image.generate_mipmaps();mat.set_shader_parameter("grain_tex",ImageTexture.create_from_image(image));geometry.material_override=mat;geometry.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(geometry)
  _collision_box(Vector3(world_size/2,-.15,world_size/2),Vector3(world_size+80,.3,world_size+80))
+ var ocean=MeshInstance3D.new();ocean.name="OceanSurface";ocean.set_meta("ocean_surface",true);var plane=PlaneMesh.new();plane.size=Vector2(span+260,span+260);ocean.mesh=plane;ocean.position=Vector3(world_size/2,float(island.get("seaLevel",-0.55)),world_size/2)
+ var ocean_mat=ShaderMaterial.new();ocean_mat.shader=load("res://assets/shaders/ocean.gdshader");ocean.material_override=ocean_mat;ocean.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(ocean)
+func _island_scenery():
+ if island.is_empty():return
+ var foliage=_standard(0,.92);var wood=_standard(0,.88);var rock_mat=_standard(0,.95);var rice=_standard(0,.9);var thatch=_standard(0,.98)
+ for palm in island.get("palms",[]):
+  var x=float(palm[0]);var z=float(palm[1]);var s=float(palm[2]);var yaw=float(palm[3]);var y=height_at(x,z)
+  var p=Vector3(x,y,z);var trunk_h=5.2*s
+  _cylinder(p+Vector3(0,trunk_h*.5,0),.16*s,trunk_h,wood,"palm_trunk",Color("6a4b32"))
+  for k in range(6):
+   var ang=yaw+k*1.0472
+   var at=p+Vector3(cos(ang)*1.15*s,trunk_h+0.15*s+sin(k*1.7)*0.22*s,sin(ang)*1.15*s)
+   var basis=Basis.from_euler(Vector3(0.58,ang,0)).scaled(Vector3(2.6*s,.10*s,.62*s))
+   _batch(at,basis,_unit("box"),foliage,"frond",Color("2f6d3f").lightened((k%3)*.045))
+ for shrub in island.get("shrubs",[]):
+  var p=Vector3(float(shrub[0]),height_at(float(shrub[0]),float(shrub[1])),float(shrub[1]));var s=float(shrub[2])
+  _batch(p+Vector3(0,.45*s,0),Basis.IDENTITY.scaled(Vector3(1.15*s,.85*s,1.15*s)),_unit("sphere"),foliage,"shrub",Color("3f7a45"))
+ for blade in island.get("grass",[]):
+  var p=Vector3(float(blade[0]),height_at(float(blade[0]),float(blade[1])),float(blade[1]));var yaw=float(blade[2]);var tone=int(blade[3])
+  _batch(p+Vector3(0,.32,0),Basis(Vector3.UP,yaw).scaled(Vector3(.11,.64,.11)),_unit("box"),foliage,"grass",Color("4f8a3f").lightened(tone*.05))
+ for field in island.get("rice",[]):
+  var cx=float(field.x);var cz=float(field.y);var levels=int(field.levels);var yaw=float(field.yaw)
+  var base_y=height_at(cx,cz)
+  for level in range(levels):
+   var inset=level*.12;var w=float(field.w)*(1.0-inset);var h=float(field.h)*(1.0-inset)
+   var pos=Vector3(cx,base_y+level*.38+.12,cz)
+   _batch(pos,Basis(Vector3.UP,yaw).scaled(Vector3(w,.24,h)),_unit("box"),rice,"rice",Color("6c9b3f").lightened(level*.025))
+ for warung in island.get("warungs",[]):
+  var x=float(warung.x);var z=float(warung.y);var yaw=float(warung.yaw);var y=height_at(x,z);var p=Vector3(x,y,z);var tone=int(warung.tone)
+  var wall=Color("c8a276").lightened(tone*.05)
+  _batch(p+Vector3(0,1.35,0),Basis(Vector3.UP,yaw).scaled(Vector3(3.2,2.7,2.4)),_unit("box"),wood,"warung",wall)
+  _collision_box(p+Vector3(0,1.35,0),Vector3(3.2,2.7,2.4),yaw)
+  _batch(p+Vector3(0,2.95,0),Basis(Vector3.UP,yaw).scaled(Vector3(3.8,.18,3.0)),_unit("box"),thatch,"roof",Color("7d5032").lightened(tone*.04))
+  _batch(p+Vector3(0,1.15,1.35),Basis(Vector3.UP,yaw).scaled(Vector3(3.0,.12,.55)),_unit("box"),wood,"counter",Color("8c623f"))
+ for stone in island.get("rocks",[]):
+  var x=float(stone[0]);var z=float(stone[1]);var s=float(stone[2]);var yaw=float(stone[3]);var y=height_at(x,z);var p=Vector3(x,y,z)
+  _batch(p+Vector3(0,.45*s,0),Basis(Vector3.UP,yaw).scaled(Vector3(1.25*s,.9*s,1.15*s)),_unit("sphere"),rock_mat,"rock",Color("6d6a61").lightened(.04))
+  if s>1.1:_collision_box(p+Vector3(0,.5*s,0),Vector3(1.6*s,1.2*s,1.5*s),yaw)
+ for dock in island.get("docks",[]):
+  var x=float(dock.x);var z=float(dock.y);var yaw=float(dock.yaw);var y=height_at(x,z);var p=Vector3(x,y,z)
+  _batch(p+Vector3(0,.25,0),Basis(Vector3.UP,yaw).scaled(Vector3(5.2,.35,1.7)),_unit("box"),wood,"dock",Color("7b5838"))
+  for side in [-1,1]:
+   _cylinder(p+Vector3(side*1.8,0,0),.12,1.8,wood,"dock_post",Color("6a4b32"))
+ for village in island.get("villages",[]):
+  var x=float(village.x);var z=float(village.y);var yaw=float(village.yaw);var y=height_at(x,z);var p=Vector3(x,y,z)
+  for k in range(3):
+   var offset=Vector3(cos(yaw+k*2.1)*3.4,0,sin(yaw+k*2.1)*3.4)
+   _batch(p+offset+Vector3(0,1.1,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.4,2.2,2.0)),_unit("box"),wood,"hut",Color("b7895f").lightened(.02))
+   _batch(p+offset+Vector3(0,2.55,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.9,.22,2.6)),_unit("box"),thatch,"roof",Color("77502f"))
 func _setup_environment():
  environment=WorldEnvironment.new();var e=Environment.new();var sky=Sky.new();var sm=ProceduralSkyMaterial.new();sm.sky_top_color=Color("365a84");sm.sky_horizon_color=Color("aebdc5");sm.ground_bottom_color=Color("27323a");sm.ground_horizon_color=Color("a1adae");sky.sky_material=sm;e.sky=sky;e.background_mode=Environment.BG_SKY;e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("b4c4d2");e.ambient_light_energy=.55;e.tonemap_mode=Environment.TONE_MAPPER_FILMIC;e.fog_enabled=true;e.fog_light_color=Color("99adb7");e.fog_density=.003;e.fog_sky_affect=.35;environment.environment=e;add_child(environment)
  sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-42,-28,0);sun.light_color=Color("ffe6c7");sun.light_energy=1.5;sun.shadow_enabled=quality>0;sun.directional_shadow_max_distance=45 if quality==1 else 75;add_child(sun)
@@ -121,12 +209,12 @@ func _batch(pos,basis,mesh,material,kind,color):
 func _commit(entry):
  var mm=MultiMesh.new();mm.transform_format=MultiMesh.TRANSFORM_3D;mm.use_colors=true;mm.mesh=entry.mesh;mm.instance_count=entry.items.size()
  for i in range(entry.items.size()):mm.set_instance_transform(i,entry.items[i]);mm.set_instance_color(i,entry.colors[i])
- var node=MultiMeshInstance3D.new();node.multimesh=mm;node.material_override=entry.material;node.position=entry.origin;node.visibility_range_end=distance_limit;node.visibility_range_end_margin=10;node.set_meta("kind",entry.kind);node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if quality==0 or entry.kind in ["leaves","lamps","red","green","water"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON;add_child(node);batch_nodes.append(node)
+ var node=MultiMeshInstance3D.new();node.multimesh=mm;node.material_override=entry.material;node.position=entry.origin;node.visibility_range_end=distance_limit;node.visibility_range_end_margin=10;node.set_meta("kind",entry.kind);node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if quality==0 or entry.kind in ["leaves","lamps","red","green","water","frond","grass","rice","shrub"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON;add_child(node);batch_nodes.append(node)
 func set_quality(tier):
  quality=tier;distance_limit=[65.0,100.0,150.0][tier]
  if sun:sun.shadow_enabled=tier>0;sun.directional_shadow_max_distance=45 if tier==1 else 75
- for node in batch_nodes:node.visibility_range_end=distance_limit;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if tier==0 or node.get_meta("kind") in ["leaves","lamps","red","green","water"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
- if environment:environment.environment.fog_density=[.006,.0035,.002][tier]
+ for node in batch_nodes:node.visibility_range_end=distance_limit;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if tier==0 or node.get_meta("kind") in ["leaves","lamps","red","green","water","frond","grass","rice","shrub"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+ if environment:environment.environment.fog_density=[.0042,.0026,.0016][tier]
 func nearest_poi(point):
  var best=null;var distance=INF
  for p in data.map.pois:

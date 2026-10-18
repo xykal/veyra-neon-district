@@ -23,6 +23,9 @@ var correction=Vector2.ZERO
 var quality=0
 var health=100.0
 var last_look_time=-10000
+var was_on_floor=true
+var air_time=0.0
+var landing_ready=false
 func setup(look=0,tier=0,audio=null):
  quality=tier;audio_node=audio;collision_layer=4;collision_mask=1|2|16
  collision=CollisionShape3D.new();var capsule=CapsuleShape3D.new();capsule.radius=.42;capsule.height=1.8;collision.shape=capsule;collision.position.y=.9;add_child(collision)
@@ -62,9 +65,19 @@ func _physics_process(delta):
   if sprinting and axis.length()>.5:stamina=maxf(0,stamina-delta*.19)
   else:stamina=minf(1,stamina+delta*.13)
   var acceleration=1-exp(-delta*(13 if direction.length()>.01 else 21));velocity.x=lerpf(velocity.x,direction.x*speed,acceleration);velocity.z=lerpf(velocity.z,direction.z*speed,acceleration)
-  if not is_on_floor():velocity.y-=9.81*delta
-  elif controls.jump and not jump_latch and not online:velocity.y=4.4;floor_snap_length=0
-  else:floor_snap_length=.3;velocity.y=-.1
+  var on_floor=is_on_floor()
+  if not on_floor:
+   velocity.y-=9.81*delta;air_time+=delta;landing_ready=true
+  elif controls.jump and not jump_latch and not online:
+   velocity.y=5.15;floor_snap_length=0;air_time=0
+   if audio_node:audio_node.jump(global_position)
+  else:
+   floor_snap_length=.3;velocity.y=-.1
+   if landing_ready and not was_on_floor:
+    landing_ready=false
+    if audio_node:audio_node.land(global_position,1.0+minf(air_time*1.6,1.8))
+   air_time=0
+  was_on_floor=on_floor
   jump_latch=controls.jump
   move_and_slide()
   # A shallow step-up keeps kerbs from becoming invisible waist-high walls.
@@ -78,18 +91,25 @@ func _physics_process(delta):
   step_distance+=Vector2(global_position.x-previous.x,global_position.z-previous.z).length()
   if is_on_floor() and moving>.6 and step_distance>(1.55 if sprinting else 1.05):
    step_distance=0
-   if audio_node:audio_node.play_at("step_"+str(randi()%4),global_position,-9,randf_range(.92,1.08))
+   if audio_node:audio_node.footstep(global_position,surface_here(),1.0 if sprinting else .78)
  pivot.rotation=Vector3(-camera_pitch,-camera_yaw-PI/2,0)
  if camera.current and avatar and not avatar.ragdoll and driving==null:avatar.visible=spring.get_hit_length()>.65
+func surface_here():
+ var d=Vector2(global_position.x-240,global_position.z-240).length()
+ if d>255:return "sand" if global_position.y<.35 else ("grass" if d<320 else "dirt")
+ return "concrete"
 func enter_vehicle(car):
+ if audio_node:audio_node.vehicle_enter(car.global_position)
  driving=car;collision.disabled=true;car.add_collision_exception_with(self);add_collision_exception_with(car);car.driver=1;car.freeze=online
  spring.add_excluded_object(car.get_rid());velocity=Vector3.ZERO
 func exit_vehicle(point):
  if driving:
+  if audio_node:audio_node.vehicle_exit(driving.global_position)
   spring.remove_excluded_object(driving.get_rid());driving.driver=0;driving.remove_collision_exception_with(self);remove_collision_exception_with(driving)
  driving=null;global_position=point;avatar.position=Vector3.ZERO;avatar.visible=true;collision.set_deferred("disabled",false);velocity=Vector3.ZERO
 func knockdown(impulse=Vector3.ZERO,seconds=2.7):
  if driving:return
+ if audio_node:audio_node.ragdoll(global_position)
  ragdoll_timer=seconds;collision.set_deferred("disabled",true);avatar.start_ragdoll(impulse)
 func recover():
  var point=avatar.body_position();avatar.stop_ragdoll();global_position=Vector3(point.x,maxf(.05,point.y),point.z);avatar.position=Vector3.ZERO;avatar.rotation.y=PI/2-facing;collision.set_deferred("disabled",false);velocity=Vector3.ZERO

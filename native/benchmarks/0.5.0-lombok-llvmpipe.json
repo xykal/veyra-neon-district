@@ -1,0 +1,27 @@
+{
+  "draw_calls_median": 85,
+  "frame_ms_mean": 41.6787,
+  "frame_ms_p50": 41.981,
+  "frame_ms_p95": 46.756,
+  "godot": "4.7.2-stable (official)",
+  "label": "0.5.0-lombok-llvmpipe",
+  "loaded_practice_actors": 2,
+  "loaded_vehicles": 12,
+  "nodes": 3436,
+  "note": "Uncapped native editor render capture; software/hardware host results are NOT a physical Android FPS guarantee.",
+  "physics_bodies_3d": 0,
+  "primitives_median": 30023,
+  "profile": "LOW",
+  "render_scale": 0.699999988079071,
+  "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+  "resources": 240,
+  "sample_frames": 30,
+  "startup_to_playable_frame_ms": 1597.67,
+  "static_memory_mb": 119.615296363831,
+  "uncapped_fps_from_mean": 23.9930708011526,
+  "video_memory_mb": 43.337721824646,
+  "viewport": [
+    1280,
+    720
+  ]
+}

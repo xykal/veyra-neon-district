@@ -1,0 +1,30 @@
+{
+  "license": "CC0-1.0 source meshes + MIT streetwear silhouette pass",
+  "note": "Baggy pants, oversized tops and chunkier boots. Skeleton/clips unchanged.",
+  "assets": [
+    {
+      "file": "citizen_female.glb",
+      "bytes": 4665040,
+      "sha256": "e002c870a21d0d77c9e3ba62125b4cce9339e0909806487838ba0189cbb8eb8f",
+      "maxOffsetMetres": {
+        "TopShort": 0.045,
+        "TopLong": 0.0557,
+        "PantsLong": 0.1428,
+        "PantsShort": 0.0587,
+        "Boots": 0.0519
+      }
+    },
+    {
+      "file": "citizen_male.glb",
+      "bytes": 4334588,
+      "sha256": "b0c1b61920803fc88b4c96c5ae8604ef2dbba5ea437c4c8f0831947622e78be2",
+      "maxOffsetMetres": {
+        "TopShort": 0.045,
+        "TopLong": 0.0566,
+        "PantsLong": 0.1445,
+        "PantsShort": 0.0601,
+        "Boots": 0.0576
+      }
+    }
+  ]
+}

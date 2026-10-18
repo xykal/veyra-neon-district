@@ -1,17 +1,24 @@
-# Veyra Native — 0.4.1-alpha.1
+# Veyra Native — 0.5.0-alpha.1
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.4.1-alpha.1)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.0-alpha.1)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
 
-## 0.4.1 performance correction
+## 0.5 Lombok Direction
 
-This update targets the reported Android 2–3 GB lag/flicker/crash and replaces the old HUD/control layout. See [PERFORMANCE-0.4.1.md](PERFORMANCE-0.4.1.md) for measured host results and limitations. This is not a promise that an untested physical phone now reaches a particular FPS.
+This alpha makes the native world feel like a proper island city instead of a gray test grid, while keeping the anti-crash memory budgets from 0.4.1. See [PERFORMANCE-0.5.0.md](PERFORMANCE-0.5.0.md) for the same-harness comparison. Software llvmpipe numbers are not a physical Android FPS promise.
+
+- **Custom splash / no Godot logo**: `assets/boot_splash.png` is an original Lombok-sunset Veyra boot art, configured through `application/boot_splash/*`; launcher icon is the original V mark.
+- **Lombok-inspired island shell**: `assets/island.json` + `district.gd` add ocean, beaches, mountain silhouettes, rice terraces, palms/shrubs/grass, warungs, rocks, docks and village huts around the shared city plan. Online roads/POIs/spawns stay compatible; the full surveyed Lombok map can replace the arrays later.
+- **Streetwear character pass**: `tools/native-fashion.py` makes pants baggier/cargo, tops oversized and boots chunkier without touching the 65-bone rig or 20 clips. Runtime accessories add caps, crossbody bags, cargo pockets, cuffs and chains per preset.
+- **Motion/SFX completeness**: smoother clip crossfades, additive lean/bob, jump/land layers, landing intensity, footstep surfaces, vehicle enter/exit/brake/scrape/impact and coastal ambient loops (38 synthesized WAVs).
+- **Larger mobile controls**: pads scale with viewport, stay clamped inside 960×540/1280×720/1600×720 and support independent steering, pedals and camera-look.
+- **AA/graphics detail**: Balanced uses 2× MSAA, High uses 4× MSAA; terrain is one readable unshaded surface with island color bands and a separate ocean shader. SAFE still boots with no MSAA/shadows and trims on memory warnings.
 
 - One terrain surface replaces intersecting road/sidewalk/paint planes. Facade windows are filtered material detail instead of overlapping thin boxes. Original clothing is layered with clearance; always-hidden skin faces are cut offline, without Android GPU readbacks.
 - Shared meshes/materials, bounded nearest-vehicle streaming, bounded staged model warmup and staged loading. Menu startup no longer builds the whole city or a second hidden player.
@@ -31,7 +38,7 @@ Inactive physical-bone colliders are disabled until ragdoll simulation actually 
 - Actual **PhysicalBone3D ragdolls** with constrained joints and Jolt collision. Low uses a simplified 11-body skeleton; other profiles use 15. Ragdoll tests advance the engine and check floor contacts/finite poses.
 - Native capsule walking/jogging/sprinting, gravity/jump, orbit camera collision, local stamina and crouch animation.
 - Offline native cars are **RigidBody3D** vehicles with four suspension rays, tyre forces, steering/braking, mass, body collisions and impact damage. They can pitch/roll and be reset upright. This is a raycast arcade vehicle model, not a validated automotive simulator.
-- Seventeen original synthesized mono WAV sound effects/loops, played through native spatial audio: footsteps, engine, tyre skid, shot, impact, door, horn, siren, wind/rain, UI and landing sources. They are original DSP audio, not sampled commercial recordings or voice acting. Not every loop is used by every alpha gameplay state.
+- Thirty-eight original synthesized mono WAV sound effects/loops, played through native spatial audio: footsteps, engine, tyre skid, shot, impact, door, horn, siren, wind/rain, UI and landing sources. They are original DSP audio, not sampled commercial recordings or voice acting. Not every loop is used by every alpha gameplay state.
 - Seeded city geometry, PBR/textured characters, procedural surface detail, instanced city batches, basic GPS/chat, touch controls and adaptive graphics.
 
 The web version remains available at https://veyra-neon-district.dikanjut.workers.dev/ and is not replaced by this native alpha.
@@ -68,15 +75,15 @@ The following are **not native feature parity yet**: WebRTC voice, recoverable a
 | T | Text chat |
 | Esc | Pause/settings/lobby |
 
-Android uses a joystick, independent swipe-look and on-screen actions in landscape. Touch emulation does not certify every phone, GPU, Android vendor or thermal condition.
+Android uses a larger joystick, independent swipe-look and on-screen actions in landscape. Pads automatically scale and clamp for notched/small screens. Touch emulation does not certify every phone, GPU, Android vendor or thermal condition.
 
 ## Adaptive 2–8 GB target
 
 | Preset | Initial intent | Budget |
 |---|---|---|
 | Low | 2–3 GB / older GLES3 hardware | 0.7 initial render scale, 30 FPS cap, no MSAA/sun shadows, 12 streamed cars, two practice actors, one ragdoll budget |
-| Balanced | Around 4 GB | 0.85 scale, shadows, 24 streamed cars, four actors, two ragdolls, 60 FPS cap |
-| High | 6–8 GB+ / stronger GPU | 1.0 scale, higher range/detail, 40 streamed cars, eight actors, three ragdolls, 60 FPS cap |
+| Balanced | Around 4 GB | 0.85 scale, 2× MSAA, shadows, 24 streamed cars, four actors, two ragdolls, 60 FPS cap |
+| High | 6–8 GB+ / stronger GPU | 1.0 scale, 4× MSAA, higher range/detail, 40 streamed cars, eight actors, three ragdolls, 60 FPS cap |
 
 Android Auto starts conservatively in Safe mode rather than treating RAM as GPU speed. Auto can downgrade further after sustained low FPS, with hysteresis; High is manual opt-in. **RAM does not determine GPU speed, and these are configured targets/caps, not guaranteed frame rates.** The compatibility renderer was chosen for broader GLES3 coverage. GPU drivers, OS, chipset and heat still matter. Actual 2 GB and 8 GB physical phones have not been certified by the headless test suite.
 
@@ -112,5 +119,5 @@ The committed assets are sufficient for ordinary builds. To regenerate derived c
 
 - Native headless engine tests: authored skeleton/clip import, physical ragdoll joint bodies and floor contacts, real capsule wall/jump movement, suspension/drive forces, application boot and two native WebSocket peers.
 - APK signatures/architecture/manifest are checked; exported Windows executable receives a native-run smoke check in Windows CI.
-- Rendered screenshots use actual Godot with Mesa software rendering, not an AI-generated mockup and not a phone performance benchmark.
+- Rendered screenshots use actual Godot with Mesa software rendering, not an AI-generated mockup and not a phone performance benchmark. `native/screenshots/island-0.5-*.png` shows the Lombok-inspired shell in-engine.
 - No claim of AAA/FiveM equivalence, universal FPS, Play Store publication, Windows code-signing certification or complete device/security audit.

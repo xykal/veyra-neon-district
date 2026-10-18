@@ -28,6 +28,8 @@ var headlamp_nodes=[]
 var headlamps_on=false
 static var templates={}
 var impact_cooldown=0.0
+var engine_started=false
+var skid_state=false
 var net_seen=false
 var net_target=Vector3.ZERO
 var net_yaw=0.0
@@ -72,6 +74,9 @@ func _bounds(root):
    else:result=result.merge(b)
  return result
 func set_drive(gas,turn,handbrake):
+ if absf(gas)>.05 and not engine_started:
+  engine_started=true
+  if audio_node:audio_node.engine_start("player-engine",global_position)
  throttle=clampf(gas,-1,1);steer=clampf(turn,-1,1);braking=handbrake
 func _physics_process(delta):
  impact_cooldown=maxf(0,impact_cooldown-delta)
@@ -104,6 +109,10 @@ func _physics_process(delta):
   elif throttle<0:longitudinal=mass*8*throttle/4 if speed_mps>.8 else engine*.42*throttle/4
   if braking:longitudinal-=clampf(speed_mps*mass*.8,-mass*3,mass*3)/4
   apply_force(wheel_forward*longitudinal,offset)
+ var slip=absf(steering)*maxf(0,absf(speed_mps)-7)/18.0 if not braking else absf(speed_mps)/16.0
+ if audio_node and slip>.35:
+  if not skid_state:skid_state=true;audio_node.play_at("skid",global_position,-14,randf_range(.95,1.05))
+ elif skid_state:skid_state=false
  apply_central_force(-linear_velocity*linear_velocity.length()*.45)
  _animate_wheels(delta)
 func _animate_wheels(delta):
@@ -123,7 +132,7 @@ func _autopilot():
 func _impact(other):
  if impact_cooldown>0 or last_speed<3:return
  impact_cooldown=.35;hp=maxf(0,hp-maxf(0,last_speed-3)*2.5)
- if audio_node:audio_node.play_at("impact",global_position,-2,clampf(1.2-mass/7000,.65,1.2))
+ if audio_node:audio_node.impact(global_position,clampf(last_speed/18.0,.6,1.6))
 func nearest_door(point):
  var left=to_global(Vector3(length_m*.08,0,-width_m/2-.65));var right=to_global(Vector3(length_m*.08,0,width_m/2+.65));return left if point.distance_to(left)<point.distance_to(right) else right
 func can_enter(point):

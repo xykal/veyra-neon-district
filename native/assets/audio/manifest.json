@@ -2,78 +2,115 @@
   "author": "Veyra contributors",
   "license": "MIT",
   "sampleRate": 24000,
+  "revision": "0.5-lombok-direction",
   "files": [
     {
       "name": "step_0",
-      "seconds": 0.19,
+      "seconds": 0.2,
       "loop": false,
-      "sha256": "3b05dcc71fdc9978f7ab72165d2f9bba9c92dfcdb4ca656b46e53ff96b38a6ed"
+      "sha256": "0a664aa4c7b9c98b66f05bfedeab0b52e1b081aeec1f4ea4c5cda32a59b177d4"
     },
     {
       "name": "step_1",
-      "seconds": 0.19,
+      "seconds": 0.2,
       "loop": false,
-      "sha256": "b693e0160df864de41d78c0823e9df6c20bbf109a0860c9da8d16e63ab701feb"
+      "sha256": "f1fde8505c6fe038886dafd99b512b86e14714c9809364e5cf21bdc72400749e"
     },
     {
       "name": "step_2",
-      "seconds": 0.19,
+      "seconds": 0.2,
       "loop": false,
-      "sha256": "d20250e8c1295c09545b17750c05e5f9461ad2aa61d5ac3fe92d0628ebee581e"
+      "sha256": "bfe128191c730a84d1d7076bb1a12ede279a998b538729a084bf8a18966dece4"
     },
     {
       "name": "step_3",
-      "seconds": 0.19,
+      "seconds": 0.2,
       "loop": false,
-      "sha256": "7e28093d476fa3dd7af0deb619200e355f70167a5c05512c8060ab58debd1740"
+      "sha256": "27a2ea82c83a772ea7e33d470dceae43ff013f70c0134b8a41cd1c14e1b0b3bf"
+    },
+    {
+      "name": "step_concrete",
+      "seconds": 0.2,
+      "loop": false,
+      "sha256": "4fca244983dae79963e3d5f6ea00fd10d8b8cc49cf3e7296f4f4603facf5980a"
+    },
+    {
+      "name": "step_grass",
+      "seconds": 0.24,
+      "loop": false,
+      "sha256": "b6cafbaaf9bfa49ce4664db4978351e761b5f6acdc35dd0f10058084e70be921"
+    },
+    {
+      "name": "step_dirt",
+      "seconds": 0.2,
+      "loop": false,
+      "sha256": "724fa132e34ee918b7fe64b3896931511020c7bceae0fc85c7b305e3eda44584"
+    },
+    {
+      "name": "step_sand",
+      "seconds": 0.2,
+      "loop": false,
+      "sha256": "5f60fe772f662676bc0915216a09f93b6ee69b2d6aece433e8fb5ceb3a3952b4"
     },
     {
       "name": "engine_idle",
       "seconds": 1.0,
       "loop": true,
-      "sha256": "1457ba404cbb711d12387feccbc2bcc073f56371a2c7d1cfdaced78425987590"
+      "sha256": "5056c9a7cd0b75a3891b76b03b6c56b54a46428a00d91f0c105701bd02e42527"
     },
     {
       "name": "engine_mid",
       "seconds": 1.0,
       "loop": true,
-      "sha256": "26ee4ba6b1d4f65e1498f8d7f0ad1b956133cc173b64ef8d4959d2ba4a19944b"
+      "sha256": "428d6e1478ddbabed1fb8cedec7bae842a86a79279ea814ed7c3a8dc927db50a"
     },
     {
       "name": "engine_high",
       "seconds": 1.0,
       "loop": true,
-      "sha256": "eee362c703488d0fadb079fd2431c763f24fb6bde426fbbaecf0a2052e9e8830"
+      "sha256": "757e3274fc74bd6241b156f7688a84080ca7d668ca370666985675fb9566c459"
+    },
+    {
+      "name": "engine_start",
+      "seconds": 1.3,
+      "loop": false,
+      "sha256": "74f2f28c8adf960a654190e4fc408406cb0dc953873c3f37cfc32737311cd3ef"
+    },
+    {
+      "name": "engine_stop",
+      "seconds": 0.8,
+      "loop": false,
+      "sha256": "074d19d9e26af3b6ef2213670eda5f940574d9e5739f7c30f29d8af8bb1ed421"
     },
     {
       "name": "skid",
       "seconds": 0.9,
       "loop": true,
-      "sha256": "b69bdba130be730a9ca14a0ab6537681c8df47f029035088f4e30e7854391dae"
+      "sha256": "166b2313bb08ac89f70ceaae67e30a0c66beec54fc62a5110d1d8821117f5af8"
     },
     {
-      "name": "shot",
-      "seconds": 0.28,
+      "name": "brake",
+      "seconds": 1.1,
       "loop": false,
-      "sha256": "63af0689ce1493d2cbe3e6f524c26eff32fde8b2f17539d66e5b1741af17bcdd"
+      "sha256": "80ad79b708619794ed4b1393912edf3884702c15a1028a9a4116dde810b2e48f"
     },
     {
-      "name": "impact",
-      "seconds": 0.46,
-      "loop": false,
-      "sha256": "77a5e5a3b3993678fe5b55db24b5ee3565d6435f2a479caa2159b8327b5a64ca"
+      "name": "scrape",
+      "seconds": 1.4,
+      "loop": true,
+      "sha256": "de2c9f132dc641c84040f03e0d1d006d6b4f123c392622b9def9d3cfb76efc1f"
     },
     {
       "name": "door",
       "seconds": 0.22,
       "loop": false,
-      "sha256": "2b1d9ca6801fd321f3615f7c11ff6ad972779ff7fdaacd81c59e7916643d023b"
+      "sha256": "54271428e044ec73578039f61596bcc440a7660b9fcf150e553bc3f94c3d6a13"
     },
     {
       "name": "horn",
       "seconds": 0.65,
       "loop": false,
-      "sha256": "e7549b578f01bcd62c645b3d797d91aea2720a28015c53e665142adb0cdd49c4"
+      "sha256": "bcb45496433f1b823776c77bf2852cc042bc7a707319ef14f38b431d0e475509"
     },
     {
       "name": "siren",
@@ -82,28 +119,118 @@
       "sha256": "43b64fbb99260236237adfcadd2b59d0f80597593a70c1dd7466eb9de357f681"
     },
     {
-      "name": "wind",
-      "seconds": 2.0,
-      "loop": true,
-      "sha256": "8e05bf7a04f1e171b40ec85047749a0cd9afeefa6c377bd92a409d8bed6f5d8e"
-    },
-    {
-      "name": "rain",
-      "seconds": 2.0,
-      "loop": true,
-      "sha256": "a2934387c81fd8701c3a5db1a97c4dc996de5d3935b4368d895521d26ef63362"
-    },
-    {
-      "name": "ui",
-      "seconds": 0.16,
+      "name": "engine_key",
+      "seconds": 0.5,
       "loop": false,
-      "sha256": "dad38e28ac2f67ee10059fe077a111506988cd3207eaccdc890f3e6d6c137409"
+      "sha256": "9caba053610cac1a0b8a7543abfb16c8eb7d8e168f9b56e6aa408ad86b51dd66"
+    },
+    {
+      "name": "shot",
+      "seconds": 0.28,
+      "loop": false,
+      "sha256": "30493a112a87acf2284850801a5aeaebbd8d7a36e231277a47857cb386e2ddb7"
+    },
+    {
+      "name": "impact",
+      "seconds": 0.46,
+      "loop": false,
+      "sha256": "0d35a0d9c7fd2fe91b245629de905eab0a92b56d6440b42d0803182a595c20b5"
+    },
+    {
+      "name": "punch",
+      "seconds": 0.34,
+      "loop": false,
+      "sha256": "5e6124c77098fd151ac2264d0e586bc971e816c4faef3af0af2f7d4ddd4fe416"
+    },
+    {
+      "name": "ragdoll_hit",
+      "seconds": 0.28,
+      "loop": false,
+      "sha256": "6b7a471c6ebda13460757a0c24217b8e3bc1476a9df3f040cd5f8f021bace36e"
+    },
+    {
+      "name": "jump",
+      "seconds": 0.2,
+      "loop": false,
+      "sha256": "553842e3cb14254ff4e1849ae75a29d8e07e7659d78c941cf627e3ae0181ba75"
     },
     {
       "name": "land",
       "seconds": 0.4,
       "loop": false,
-      "sha256": "79095d0f51c40df33c4037e5583409afc327f327c7025297b9eff773b57cd021"
+      "sha256": "d2e9f44b2a6e6475458f3e87147458e4e0c842991fa2e916f16b47e3c88ad9ea"
+    },
+    {
+      "name": "land_hard",
+      "seconds": 0.32,
+      "loop": false,
+      "sha256": "75a0da45e2d283ebe3a2f70af95d43fd78801b073d8df562d83385df32b0b56b"
+    },
+    {
+      "name": "cloth",
+      "seconds": 1.2,
+      "loop": false,
+      "sha256": "e82daedb36ea00c16f8abf44516a36ba18aaea76f428d1582c0967593d5bc0ec"
+    },
+    {
+      "name": "wind",
+      "seconds": 2.0,
+      "loop": true,
+      "sha256": "dfa9bcc66862c446341d66c127c11f5adf7c3e7948620b22a131e5e78c89ee4a"
+    },
+    {
+      "name": "wind_high",
+      "seconds": 2.0,
+      "loop": true,
+      "sha256": "edfdd6f29b85767d6e66548d5bc6e113cb3e3421875dcf0d8b0c7b8d3ed17241"
+    },
+    {
+      "name": "rain",
+      "seconds": 2.0,
+      "loop": true,
+      "sha256": "9fc1c478df1186db9f605d64b368f280af11edb5488d3c890ede633d92ce590c"
+    },
+    {
+      "name": "thunder",
+      "seconds": 1.6,
+      "loop": false,
+      "sha256": "9b75668934d1586c24f061848b0a6b17bac3466fa224caee467afac353cd3cd2"
+    },
+    {
+      "name": "ocean",
+      "seconds": 2.2,
+      "loop": true,
+      "sha256": "18e1ed412a69c530a2a76ef0a55f657861bd11ae69a4729ae38cec0785fc379b"
+    },
+    {
+      "name": "birds",
+      "seconds": 1.8,
+      "loop": false,
+      "sha256": "64cbdf3f7f9b1624a09a8ab68bec11a4bde96bc67c6b8062c611a5a396dc6839"
+    },
+    {
+      "name": "ui",
+      "seconds": 0.16,
+      "loop": false,
+      "sha256": "e8d332abcb5e9e1158921dadd3b9752ea08582dc188400137f573aab22f6b4ef"
+    },
+    {
+      "name": "ui_confirm",
+      "seconds": 0.22,
+      "loop": false,
+      "sha256": "1c304b85d403d43895023e71a5b7e5005802dc0628edbf5b881802bf642545ed"
+    },
+    {
+      "name": "ui_back",
+      "seconds": 0.18,
+      "loop": false,
+      "sha256": "8e73cbaab773526187a91e0e762156e1c7510723dcc064dfb04b0489d73e2519"
+    },
+    {
+      "name": "ui_level",
+      "seconds": 0.32,
+      "loop": false,
+      "sha256": "516abef22e425291f3d232c99635baae0b9d1c0880c17bab00e52f020e31d235"
     }
   ]
 }
