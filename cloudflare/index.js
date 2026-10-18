@@ -89,9 +89,17 @@ export class City extends DurableObject {
     }
   }
   fetch(request) {
+    try {
+      return this.route(request);
+    } catch (e) {
+      console.error('City fetch failed:', e.message);
+      return json({ ok:false, error:'district-unavailable' }, 503);
+    }
+  }
+  route(request) {
     const path = new URL(request.url).pathname;
-    if (path === '/healthz') return json({ ok:true, game:'veyra-neon-district', version:RELEASE, runtime:'cloudflare-durable-objects', build:this.env.BUILD_SHA || 'local', players:this.room?.game.players.size || 0, capacity:Number(this.env.MAX_PLAYERS) || 16, simulation:this.loop ? 'active' : 'idle' }, 200, request.method === 'HEAD');
-    if (path === '/api/leaderboard') return json({ rows:this.profiles.top(25, this.room?.game.players.values() || []) }, 200, request.method === 'HEAD');
+    if (path === '/healthz') return json({ ok:true, game:'veyra-neon-district', version:RELEASE, runtime:'cloudflare-durable-objects', build:this.env.BUILD_SHA || 'local', players:this.room?.game?.players?.size || 0, capacity:Number(this.env.MAX_PLAYERS) || 16, simulation:this.loop ? 'active' : 'idle' }, 200, request.method === 'HEAD');
+    if (path === '/api/leaderboard') return json({ rows:this.profiles.top(25, this.room?.game?.players?.values() || []) }, 200, request.method === 'HEAD');
     if (path !== '/' || !isUpgrade(request)) return new Response('Not found', { status:404 });
     const room = this.getRoom();
     const ip = request.headers.get('CF-Connecting-IP') || 'local';
