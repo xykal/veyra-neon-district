@@ -1,0 +1,19 @@
+services:
+  game:
+    image: ghcr.io/xykal/veyra-neon-district:latest
+    build: .
+    restart: unless-stopped
+    init: true
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DATA_DIR: /app/data
+      NODE_ENV: production
+    volumes:
+      - veyra-progress:/app/data
+    mem_limit: 512m
+    cpus: 1.0
+    stop_grace_period: 10s
+volumes:
+  veyra-progress:

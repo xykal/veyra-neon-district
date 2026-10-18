@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Veyra Lite — Neon District 2D</title>
+<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../touch.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🏙️</text></svg>" />
+</head>
+<body>
+
+<canvas id="game"></canvas>
+<canvas id="minimap" width="190" height="190"></canvas>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <div class="panel" id="statbox">
+    <div class="row"><span class="label">NAMA</span><span class="val" id="pname">-</span></div>
+    <div class="row"><span class="label">HP</span>
+      <div class="hpbar"><div class="hpfill" id="hpfill"></div><span id="hptext">100</span></div>
+    </div>
+    <div class="row"><span class="label">KILL</span><span class="val" id="kills">0</span></div>
+    <div class="row" id="wantedrow" style="display:none"><span class="label">WANTED</span><span class="val" id="wanted">☆☆☆☆☆</span></div>
+    <div class="row"><span class="label">PING</span><span class="val" id="ping">0 ms</span></div>
+    <div class="row"><span class="label">MODE</span><span class="val" id="mode">-</span></div>
+  </div>
+
+  <div id="speedo" class="panel hidden">
+    <div class="speed"><span id="speedval">0</span><small> km/h</small></div>
+    <div class="carname" id="carname">-</div>
+  </div>
+
+  <div id="killfeed"></div>
+  <div id="toasts"></div>
+
+  <div id="scoreboard" class="panel hidden">
+    <h3>SKOR <span id="sbcount"></span></h3>
+    <table>
+      <thead><tr><th>#</th><th>NAMA</th><th>HP</th><th>KILL</th><th>KENDARAAN</th></tr></thead>
+      <tbody id="sbtbody"></tbody>
+    </table>
+  </div>
+
+  <div id="chatlog"></div>
+  <form id="chatform" autocomplete="off">
+    <input id="chatinput" maxlength="200" placeholder="Tekan [T] untuk chat..." autocomplete="off" />
+  </form>
+
+  <div id="dead" class="hidden">
+    <h2>MATI</h2>
+    <p id="deadinfo">Respawn dalam 3 detik...</p>
+  </div>
+
+  <div id="crosshair" class="hidden"></div>
+</div>
+
+<!-- ============ MENU ============ -->
+<div id="menu">
+  <div class="menu-card">
+    <h1>VEYRA<span>LITE · 2D</span></h1>
+    <p class="tag">Mode ringan 2D · server dan progres yang sama</p>
+    <input id="nickname" maxlength="16" placeholder="Masukkan nickname..." />
+    <button id="playbtn">MASUK KOTA</button>
+    <div class="keys">
+      <div><b>WASD</b> Jalan / Gas</div>
+      <div><b>Shift</b> Lari</div>
+      <div><b>F</b> Masuk / Keluar mobil</div>
+      <div><b>Spasi</b> Rem tangan</div>
+      <div><b>Klik</b> Tembak</div>
+      <div><b>T</b> Chat</div>
+      <div><b>Tab</b> Skor</div>
+      <div><b>H</b> Klakson</div>
+      <div><b>Scroll</b> Zoom</div>
+    </div>
+    <p class="status" id="menustatus">Menyiapkan server...</p>
+  </div>
+</div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>

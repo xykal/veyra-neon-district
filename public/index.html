@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#08131e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Veyra: Neon District — kota 3D multiplayer di browser. Jelajahi jalanan, kendarai 18 jenis kendaraan, ambil job, cari tujuan dengan GPS, dan ngobrol lewat voice.">
+<title>Veyra: Neon District — Multiplayer City Sandbox</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/touch.css">
+</head>
+<body class="menu-mode">
+<canvas id="game" aria-label="Dunia 3D Veyra"></canvas>
+<canvas id="overlay"></canvas>
+<canvas id="minimap" width="190" height="190" aria-label="Peta mini"></canvas>
+<div id="hud">
+  <div class="panel" id="statbox">
+    <div class="hud-brand">VEYRA <span>NEON DISTRICT</span></div>
+    <div class="row"><span class="label">WARGA</span><span class="val" id="pname">—</span></div>
+    <div class="row"><span class="label">HP</span><div class="hpbar"><div class="hpfill" id="hpfill"></div><span id="hptext">100</span></div></div>
+    <div class="row"><span class="label">KILL</span><span class="val" id="kills">0</span></div>
+    <div class="row"><span class="label">DOMPET</span><span class="val" id="money">$0</span></div>
+    <div class="row" id="jobrow" style="display:none"><span class="label">JOB</span><span class="val" id="jobinfo">—</span></div>
+    <div class="row" id="wantedrow" style="display:none"><span class="label">WANTED</span><span class="val" id="wanted">☆☆☆☆☆</span></div>
+    <div class="row"><span class="label">PING</span><span class="val" id="ping">0 ms</span></div>
+    <div class="row"><span class="label">MODE</span><span class="val" id="mode">—</span></div>
+  </div>
+  <div id="speedo" class="panel hidden"><div class="speed"><span id="speedval">0</span><small> km/h</small></div><div class="carname" id="carname">—</div></div>
+  <div id="jobpanel" class="panel hidden"><div class="jobtitle">PENGIRIMAN</div><div class="jobdist" id="jobdist">—</div><div class="jobpay">bonus <span id="jobpay">$0</span></div></div>
+  <div id="killfeed"></div><div id="toasts" aria-live="polite"></div>
+  <div id="scoreboard" class="panel hidden" role="dialog" aria-label="Pemain online">
+    <button class="panel-close" data-close="scoreboard" aria-label="Tutup">×</button>
+    <h3>WARGA ONLINE <span id="sbcount"></span></h3>
+    <div class="table-scroll"><table><thead><tr><th>#</th><th>NAMA</th><th>HP</th><th>KILL</th><th>KENDARAAN</th><th>UANG</th></tr></thead><tbody id="sbtbody"></tbody></table></div>
+  </div>
+  <div id="gpspanel" class="panel hidden" role="dialog" aria-label="GPS">
+    <button class="panel-close" data-close="gpspanel" aria-label="Tutup GPS">×</button><h3>DISTRICT GPS</h3>
+    <input id="gpssearch" maxlength="60" placeholder="Cari bank, rumah sakit, pasar, taman…" autocomplete="off" aria-label="Cari tempat">
+    <div id="gpslist"></div><div id="gpsinfo">Pilih tujuan untuk menampilkan rute.</div>
+    <button class="secondary small" id="gpsclear">Hapus rute</button>
+  </div>
+  <div id="gpshud" class="hidden"></div><div id="voicehud" class="hidden"></div>
+  <div id="lbpanel" class="panel hidden" role="dialog" aria-label="Papan rekor">
+    <button class="panel-close" data-close="lbpanel" aria-label="Tutup papan rekor">×</button>
+    <h3>DISTRICT LEGENDS <span id="lbcount"></span></h3>
+    <div class="table-scroll"><table><thead><tr><th>#</th><th>WARGA</th><th>SKOR</th><th>KILL</th><th>JOB</th><th>UANG</th><th>JARAK</th></tr></thead><tbody id="lbtbody"></tbody></table></div>
+    <div class="lbnote">Skor: uang + 100 × kill + 50 × job. Progres disimpan di server, identitas tersimpan di browser ini.</div>
+  </div>
+  <div id="settingspanel" class="panel hidden" role="dialog" aria-label="Pengaturan">
+    <button class="panel-close" data-close="settingspanel" aria-label="Tutup pengaturan">×</button>
+    <h3>PENGATURAN</h3>
+    <label class="setting-row">Grafis<select id="qualityselect"><option value="auto">Otomatis (disarankan)</option><option value="0">Rendah · hemat daya</option><option value="1">Seimbang</option><option value="2">Tinggi · bayangan</option></select></label>
+    <div id="qualityinfo" class="setting-note">Menyiapkan grafis…</div>
+    <div class="setting-row"><span>Voice · push-to-talk</span><button id="micbtn" class="secondary small">Aktifkan mic</button></div>
+    <p id="micstatus" class="setting-note">Mic off. Izin diminta hanya saat kamu mengaktifkannya.</p>
+    <p class="setting-note">Tahan V / VOX untuk bicara. Volume mengikuti jarak. Voice memakai koneksi peer-to-peer; beberapa jaringan memerlukan TURN.</p>
+    <button id="fullscreenbtn" class="secondary">Layar penuh</button>
+    <a href="/2d/" class="lite-link">Perangkat kesulitan? Buka mode ringan 2D →</a>
+    <p class="setting-note">Dompet dan statistik mengikuti browser ini. Jangan hapus data situs jika ingin mempertahankan progres. Ini belum sistem akun/login.</p>
+  </div>
+  <div id="chatlog" aria-live="polite"></div>
+  <form id="chatform" autocomplete="off"><input id="chatinput" maxlength="200" placeholder="[T] ngobrol dengan warga…" autocomplete="off" aria-label="Pesan chat"></form>
+  <div id="dead" class="hidden"><h2>WASTED</h2><p id="deadinfo">Respawn sebentar lagi…</p></div>
+  <div id="crosshair3d"></div>
+  <div id="help"><b>F</b> kendaraan <b>G</b> GPS <b>L</b> rekor <b>V</b> bicara <b>P</b> pengaturan</div>
+</div>
+<div id="menu">
+  <main class="menu-card">
+    <div class="brand-eyebrow"><span class="live-dot"></span> BROWSER MULTIPLAYER · ALPHA 0.2</div>
+    <h1>VEYRA<span>NEON DISTRICT</span></h1>
+    <p class="tag">Satu kota. Banyak cerita. Giliran lo bikin jejak.</p>
+    <p class="menu-description">Jelajahi kota 3D, ambil kendaraan, kerjakan pengiriman, dan temui warga lain—langsung di browser.</p>
+    <label class="nickname-label" for="nickname">NAMA WARGA</label>
+    <input id="nickname" maxlength="16" placeholder="Nama panggilan lo…" autocomplete="nickname" spellcheck="false">
+    <button id="playbtn">MASUK DISTRIK <span>→</span></button>
+    <div class="menu-secondary"><button id="demobtn" class="secondary">Coba offline</button><button id="menusettings" class="secondary">Pengaturan</button></div>
+    <div class="keys">
+      <div><b>WASD</b> Jalan / gas / setir</div><div><b>Mouse</b> Kamera + tembak</div>
+      <div><b>F</b> Naik / turun</div><div><b>Shift / Space</b> Lari / rem tangan</div>
+      <div><b>T / Tab</b> Chat / pemain</div><div><b>G / L / V</b> GPS / rekor / voice</div>
+    </div>
+    <p class="mobile-instructions">Joystick kiri untuk jalan; geser kanan untuk kamera. Tombol FIRE, NAIK, REM, dan VOX siap di layar.</p>
+    <p class="status" id="menustatus">Menyiapkan dunia 3D…</p>
+    <footer class="menu-footer"><a href="/2d/">Mode ringan 2D</a><span>Original city sandbox · no GTA assets</span></footer>
+  </main>
+</div>
+<script type="module" src="/main.js"></script>
+</body>
+</html>

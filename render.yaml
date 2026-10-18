@@ -1,0 +1,21 @@
+# Render Blueprint. This provisions a paid service + disk; review pricing before approving.
+services:
+  - type: web
+    name: veyra-neon-district
+    runtime: docker
+    plan: starter
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    numInstances: 1
+    disk:
+      name: veyra-progress
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /app/data
+      - key: MAX_PLAYERS
+        value: "64"

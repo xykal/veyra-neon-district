@@ -1,0 +1,1524 @@
+{
+  "cars": {
+    "compact": {
+      "file": "compact.glb",
+      "source": "hatchback-sports",
+      "size": [
+        2.85,
+        1.1,
+        1.3
+      ],
+      "paint": 4040313,
+      "wheels": [
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.835,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.835,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.785,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.785,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            1.325,
+            0.55,
+            -0.45
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            1.325,
+            0.55,
+            0.45
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            -1.275,
+            0.8467,
+            -0.4922
+          ],
+          "facing": -1,
+          "tail": true
+        },
+        {
+          "at": [
+            -1.275,
+            0.8467,
+            0.4922
+          ],
+          "facing": -1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.425,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.425,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "sedan": {
+      "file": "sedan.glb",
+      "source": "sedan",
+      "size": [
+        2.55,
+        1.15,
+        1.5
+      ],
+      "paint": 3108816,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.635,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.635,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.685,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.685,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            0,
+            0.725,
+            0
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            0,
+            0.725,
+            0
+          ],
+          "facing": 1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.275,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.275,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "sport": {
+      "file": "sport.glb",
+      "source": "sedan-sports",
+      "size": [
+        2.55,
+        0.95,
+        1.3
+      ],
+      "paint": 15844367,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.635,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.635,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.685,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.685,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            0,
+            0.625,
+            0
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            0,
+            0.625,
+            0
+          ],
+          "facing": 1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.275,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.275,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "police": {
+      "file": "police.glb",
+      "source": "police",
+      "size": [
+        3.1,
+        1.1133,
+        1.5
+      ],
+      "paint": 15659767,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.81,
+            0.3,
+            -0.45
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.81,
+            0.3,
+            0.45
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.81,
+            0.3,
+            -0.45
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.81,
+            0.3,
+            0.45
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            0,
+            0.7434,
+            0
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            0,
+            0.7434,
+            0
+          ],
+          "facing": 1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.55,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.55,
+          "height": 0.3375
+        }
+      },
+      "livery": {
+        "x": [
+          -0.435,
+          0.435
+        ],
+        "y": [
+          0.495,
+          0.8
+        ],
+        "side": 0.55
+      }
+    },
+    "van": {
+      "file": "van.glb",
+      "source": "van",
+      "size": [
+        2.75,
+        1.2,
+        1.5
+      ],
+      "paint": 9345711,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.735,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.735,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.785,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.785,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            0,
+            0.75,
+            0
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            0,
+            0.75,
+            0
+          ],
+          "facing": 1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.375,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.375,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "pickup": {
+      "file": "pickup.glb",
+      "source": "truck",
+      "size": [
+        2.95,
+        1.3,
+        1.5
+      ],
+      "paint": 4040313,
+      "wheels": [
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.885,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.885,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.735,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.735,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            1.375,
+            0.6042,
+            -0.4813
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            1.375,
+            0.6042,
+            0.4813
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            -1.425,
+            0.65,
+            -0.4125
+          ],
+          "facing": -1,
+          "tail": true
+        },
+        {
+          "at": [
+            -1.425,
+            0.65,
+            0.4125
+          ],
+          "facing": -1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.475,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.475,
+          "height": 0.2375
+        }
+      },
+      "livery": null
+    },
+    "tractor": {
+      "file": "tractor.glb",
+      "source": "tractor",
+      "size": [
+        2.0008,
+        1.4138,
+        1.3421
+      ],
+      "paint": 8172354,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.5753,
+            0.5255,
+            -0.4653
+          ],
+          "radius": 0.5255,
+          "width": 0.4116,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.5753,
+            0.5255,
+            0.4653
+          ],
+          "radius": 0.5255,
+          "width": 0.4116,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.7305,
+            0.3256,
+            -0.4148
+          ],
+          "radius": 0.3256,
+          "width": 0.2991,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.7305,
+            0.3256,
+            0.4148
+          ],
+          "radius": 0.3256,
+          "width": 0.2991,
+          "steers": true
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            0.1004,
+            0.8952,
+            0
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            0.1004,
+            0.8952,
+            0
+          ],
+          "facing": 1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.0004,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.0004,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "truck": {
+      "file": "pickup.glb",
+      "source": "truck",
+      "size": [
+        2.95,
+        1.15,
+        1.5
+      ],
+      "paint": 7306636,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            -0.735,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.735,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.885,
+            0.3,
+            -0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            0.885,
+            0.3,
+            0.425
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            0,
+            0.725,
+            0
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            0,
+            0.725,
+            0
+          ],
+          "facing": 1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 1.475,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -1.475,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "taxi": {
+      "file": "taxi.glb",
+      "source": "taxi",
+      "size": [
+        1.5,
+        1.35,
+        2.75
+      ],
+      "paint": 15965202,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.3,
+            0.3,
+            -0.76
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.3,
+            0.3,
+            -0.76
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.3,
+            0.3,
+            0.76
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.3,
+            0.3,
+            0.76
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.75,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.75,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "ambulance": {
+      "file": "ambulance.glb",
+      "source": "ambulance",
+      "size": [
+        1.5,
+        1.6,
+        3.25
+      ],
+      "paint": 15266293,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.3,
+            0.3,
+            -0.91
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.3,
+            0.3,
+            -0.91
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.3,
+            0.3,
+            1.01
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.3,
+            0.3,
+            1.01
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.75,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.75,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "firetruck": {
+      "file": "firetruck.glb",
+      "source": "firetruck",
+      "size": [
+        1.5,
+        1.5,
+        3.4
+      ],
+      "paint": 13646123,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.4,
+            0.3,
+            -0.66
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.4,
+            0.3,
+            -0.66
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.4,
+            0.3,
+            0.96
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.4,
+            0.3,
+            0.96
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.75,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.75,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "garbage": {
+      "file": "garbage-truck.glb",
+      "source": "garbage-truck",
+      "size": [
+        1.6,
+        1.475,
+        3.45
+      ],
+      "paint": 6130234,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.3,
+            0.3,
+            -0.51
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.3,
+            0.3,
+            -0.51
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.3,
+            0.3,
+            1.11
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.3,
+            0.3,
+            1.11
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.8,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.8,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "delivery": {
+      "file": "delivery.glb",
+      "source": "delivery",
+      "size": [
+        1.5,
+        1.5,
+        3.25
+      ],
+      "paint": 16117985,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.3,
+            0.3,
+            -0.61
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.3,
+            0.3,
+            -0.61
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.3,
+            0.3,
+            1.01
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.3,
+            0.3,
+            1.01
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.75,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.75,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "suv": {
+      "file": "suv.glb",
+      "source": "suv",
+      "size": [
+        1.5,
+        1.1,
+        2.55
+      ],
+      "paint": 2899536,
+      "wheels": [
+        {
+          "node": "wheel-back",
+          "at": [
+            0,
+            0.7,
+            -1.05
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.3,
+            0.3,
+            -0.56
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.3,
+            0.3,
+            -0.56
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.3,
+            0.3,
+            0.76
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.3,
+            0.3,
+            0.76
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.75,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.75,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "luxury": {
+      "file": "suv-luxury.glb",
+      "source": "suv-luxury",
+      "size": [
+        1.5,
+        1.175,
+        2.85
+      ],
+      "paint": 1779249,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.3,
+            0.3,
+            -0.71
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.3,
+            0.3,
+            -0.71
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.3,
+            0.3,
+            0.81
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.3,
+            0.3,
+            0.81
+          ],
+          "radius": 0.3,
+          "width": 0.35,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.75,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.75,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "supercar": {
+      "file": "race.glb",
+      "source": "race",
+      "size": [
+        1.2,
+        0.6325,
+        2.5598
+      ],
+      "paint": 16723555,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.35,
+            0.3,
+            -0.8801
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.35,
+            0.3,
+            -0.8801
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.35,
+            0.3,
+            0.6399
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.35,
+            0.3,
+            0.6399
+          ],
+          "radius": 0.3,
+          "width": 0.3,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.6,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.6,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "kart": {
+      "file": "kart-ooli.glb",
+      "source": "kart-ooli",
+      "size": [
+        0.9323,
+        1.2478,
+        1.4278
+      ],
+      "paint": 1482885,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.2774,
+            0.2098,
+            -0.3606
+          ],
+          "radius": 0.2098,
+          "width": 0.2098,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.2774,
+            0.2098,
+            -0.3606
+          ],
+          "radius": 0.2098,
+          "width": 0.2098,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.2774,
+            0.2098,
+            0.3237
+          ],
+          "radius": 0.2098,
+          "width": 0.2098,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.2774,
+            0.2098,
+            0.3237
+          ],
+          "radius": 0.2098,
+          "width": 0.2098,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.4662,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.4662,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "shovel": {
+      "file": "tractor-shovel.glb",
+      "source": "tractor-shovel",
+      "size": [
+        1.4586,
+        1.512,
+        2.4701
+      ],
+      "paint": 15965202,
+      "wheels": [
+        {
+          "node": "wheel-back-left",
+          "at": [
+            0.4876,
+            0.4376,
+            -0.6863
+          ],
+          "radius": 0.4376,
+          "width": 0.3427,
+          "steers": false
+        },
+        {
+          "node": "wheel-back-right",
+          "at": [
+            -0.4876,
+            0.4376,
+            -0.6863
+          ],
+          "radius": 0.4376,
+          "width": 0.3427,
+          "steers": false
+        },
+        {
+          "node": "wheel-front-left",
+          "at": [
+            0.4146,
+            0.2693,
+            0.4123
+          ],
+          "radius": 0.2693,
+          "width": 0.2473,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            -0.4146,
+            0.2693,
+            0.4123
+          ],
+          "radius": 0.2693,
+          "width": 0.2473,
+          "steers": true
+        }
+      ],
+      "lamps": [],
+      "plates": {
+        "front": {
+          "face": 0.7293,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -0.7293,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    },
+    "bus": {
+      "file": "bus.glb",
+      "source": "bus",
+      "size": [
+        4.63,
+        1.52,
+        1.504
+      ],
+      "paint": 10135476,
+      "wheels": [
+        {
+          "node": "wheel-front-left",
+          "at": [
+            1.5,
+            0.31,
+            0.73
+          ],
+          "radius": 0.27,
+          "width": 0.18,
+          "steers": true
+        },
+        {
+          "node": "wheel-front-right",
+          "at": [
+            1.5,
+            0.31,
+            -0.73
+          ],
+          "radius": 0.27,
+          "width": 0.18,
+          "steers": true
+        },
+        {
+          "node": "wheel-rear-left",
+          "at": [
+            -1.42,
+            0.31,
+            0.73
+          ],
+          "radius": 0.27,
+          "width": 0.18,
+          "steers": false
+        },
+        {
+          "node": "wheel-rear-right",
+          "at": [
+            -1.42,
+            0.31,
+            -0.73
+          ],
+          "radius": 0.27,
+          "width": 0.18,
+          "steers": false
+        }
+      ],
+      "lamps": [
+        {
+          "at": [
+            2.265,
+            0.61,
+            0
+          ],
+          "facing": 1,
+          "tail": false
+        },
+        {
+          "at": [
+            -2.265,
+            0.67,
+            0
+          ],
+          "facing": -1,
+          "tail": true
+        }
+      ],
+      "plates": {
+        "front": {
+          "face": 2.315,
+          "height": 0.2375
+        },
+        "rear": {
+          "face": -2.315,
+          "height": 0.3375
+        }
+      },
+      "livery": null
+    }
+  }
+}
