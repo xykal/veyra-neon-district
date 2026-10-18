@@ -331,6 +331,8 @@ func _smoke_test():
  for i in range(180):await get_tree().physics_frame
  _check(player.avatar.physical.size()>=11,"physical bone bodies")
  _check(player.global_position.is_finite(),"ragdoll recovery finite")
+ audio_node.shutdown();OS.delay_msec(120)
+ for i in range(2):await get_tree().process_frame
  print("NATIVE_APP_SMOKE_PASS" if native_failures==0 else "NATIVE_APP_SMOKE_FAIL", " checks=",native_checks," renderer=",DisplayServer.get_name());get_tree().quit(0 if native_failures==0 else 1)
 func _online_test():
  start_game(true)
