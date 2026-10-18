@@ -1,5 +1,5 @@
 // Minimap 2D (dipakai juga di mode 3D).
-import { COLORS } from '/shared/map.js';
+import { COLORS } from '../shared/map.js';
 
 export class Minimap {
   constructor(canvas, map) {

@@ -61,3 +61,15 @@ test('Cloudflare SQL: parameter binding handles hostile names and bounds invalid
   p.record(player("'; DROP TABLE profiles; --", a, Infinity)); p.save();
   assert.equal(p.top()[0].money, 0); assert.equal(s.sql.exec('SELECT COUNT(*) AS n FROM profiles').toArray()[0].n, 1);
 });
+
+test('Cloudflare SQL: additive appearance migration preserves a pre-0.3 wallet and identity',t=>{
+ const s=adapter();t.after(()=>s.db.close());
+ s.db.exec('CREATE TABLE profiles (key TEXT PRIMARY KEY,name TEXT NOT NULL,money INTEGER NOT NULL,kills INTEGER NOT NULL,deaths INTEGER NOT NULL,jobs INTEGER NOT NULL,dist INTEGER NOT NULL,best INTEGER NOT NULL,time INTEGER NOT NULL,updated INTEGER NOT NULL,score INTEGER NOT NULL)');
+ const token='9'.repeat(64),key=digest(token);
+ s.db.prepare('INSERT INTO profiles VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(key,'Legacy',4321,4,2,3,200,120,99,Date.now(),4871);
+ const store=new SqlProfiles(s),session=store.resume(token),p={name:'LegacyAgain'};store.restore(p,session);
+ assert.equal(p.money,4321);assert.equal(p.kills,4);assert.equal(session.token,token);
+ p.appearance={...p.appearance,model:4,top:2,bottom:1};store.record(p);store.save();
+ const cold=new SqlProfiles(s),restored={};cold.restore(restored,cold.resume(token));assert.equal(restored.money,4321);assert.equal(restored.appearance.model,4);assert.equal(restored.appearance.top,2);
+ assert.equal(s.sql.exec('SELECT COUNT(*) AS n FROM profiles').toArray()[0].n,1);
+});

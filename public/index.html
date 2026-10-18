@@ -11,8 +11,8 @@
 <title>Veyra: Neon District — Multiplayer City Sandbox</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/styles.css">
-<link rel="stylesheet" href="/touch.css">
+<link rel="stylesheet" href="/r/0.3.0/public/styles.css">
+<link rel="stylesheet" href="/r/0.3.0/public/touch.css">
 </head>
 <body class="menu-mode">
 <canvas id="game" aria-label="Dunia 3D Veyra"></canvas>
@@ -59,6 +59,7 @@
     <div class="setting-row"><span>Voice · push-to-talk</span><button id="micbtn" class="secondary small">Aktifkan mic</button></div>
     <p id="micstatus" class="setting-note">Mic off. Izin diminta hanya saat kamu mengaktifkannya.</p>
     <p class="setting-note">Tahan V / VOX untuk bicara. Volume mengikuti jarak. Voice memakai koneksi peer-to-peer; beberapa jaringan memerlukan TURN.</p>
+    <button id="wardrobebtn" class="secondary">Studio karakter · ganti outfit</button>
     <button id="fullscreenbtn" class="secondary">Layar penuh</button>
     <a href="/2d/" class="lite-link">Perangkat kesulitan? Buka mode ringan 2D →</a>
     <p class="setting-note">Dompet dan statistik mengikuti browser ini. Jangan hapus data situs jika ingin mempertahankan progres. Ini belum sistem akun/login.</p>
@@ -66,29 +67,51 @@
   <div id="chatlog" aria-live="polite"></div>
   <form id="chatform" autocomplete="off"><input id="chatinput" maxlength="200" placeholder="[T] ngobrol dengan warga…" autocomplete="off" aria-label="Pesan chat"></form>
   <div id="dead" class="hidden"><h2>WASTED</h2><p id="deadinfo">Respawn sebentar lagi…</p></div>
-  <div id="crosshair3d"></div>
+  <div id="crosshair3d"></div><button id="vehicleprompt" class="hidden" type="button"><kbd>F</kbd><span id="vehicleprompttext"></span><small id="vehicledistance"></small></button>
   <div id="help"><b>F</b> kendaraan <b>G</b> GPS <b>L</b> rekor <b>V</b> bicara <b>P</b> pengaturan</div>
 </div>
 <div id="menu">
-  <main class="menu-card">
-    <div class="brand-eyebrow"><span class="live-dot"></span> BROWSER MULTIPLAYER · ALPHA 0.2</div>
-    <h1>VEYRA<span>NEON DISTRICT</span></h1>
-    <p class="tag">Satu kota. Banyak cerita. Giliran lo bikin jejak.</p>
-    <p class="menu-description">Jelajahi kota 3D, ambil kendaraan, kerjakan pengiriman, dan temui warga lain—langsung di browser.</p>
-    <label class="nickname-label" for="nickname">NAMA WARGA</label>
-    <input id="nickname" maxlength="16" placeholder="Nama panggilan lo…" autocomplete="nickname" spellcheck="false">
-    <button id="playbtn">MASUK DISTRIK <span>→</span></button>
-    <div class="menu-secondary"><button id="demobtn" class="secondary">Coba offline</button><button id="menusettings" class="secondary">Pengaturan</button></div>
-    <div class="keys">
-      <div><b>WASD</b> Jalan / gas / setir</div><div><b>Mouse</b> Kamera + tembak</div>
-      <div><b>F</b> Naik / turun</div><div><b>Shift / Space</b> Lari / rem tangan</div>
-      <div><b>T / Tab</b> Chat / pemain</div><div><b>G / L / V</b> GPS / rekor / voice</div>
+ <main class="lobby-shell">
+  <section class="menu-card">
+   <div class="brand-eyebrow"><span class="live-dot"></span> CITY ROLEPLAY · ALPHA 0.3</div>
+   <h1>VEYRA<span>NEON DISTRICT</span></h1>
+   <p class="tag">Your face. Your fit. Your district.</p>
+   <p class="menu-description">Pilih identitas, atur outfit, lalu turun ke jalan. Satu kota multiplayer—bukan lobby kosong.</p>
+   <div class="district-card"><span class="district-icon">ND</span><div><strong>NEON DISTRICT</strong><small>Shared city · driving · delivery · proximity voice</small></div><span class="district-status">PUBLIC</span></div>
+   <label class="nickname-label" for="nickname">NAMA WARGA</label>
+   <input id="nickname" maxlength="16" placeholder="Nama panggilan lo…" autocomplete="nickname" spellcheck="false">
+   <button id="playbtn">MASUK DISTRIK <span>→</span></button>
+   <button id="cancelwardrobe" class="secondary" hidden>Batal · kembali bermain</button>
+   <div class="menu-secondary"><button id="demobtn" class="secondary">Coba offline</button><button id="menusettings" class="secondary">Pengaturan</button></div>
+   <div class="keys"><div><b>WASD</b> Gerak / gas / setir</div><div><b>Shift</b> Sprint</div><div><b>F</b> Masuk / keluar mobil</div><div><b>Space</b> Rem tangan</div><div><b>Drag / mouse</b> Kamera</div><div><b>RMB</b> Bidik · LMB tembak</div></div>
+   <p class="mobile-instructions">Joystick untuk bergerak. Geser kanan untuk kamera. Dekati pintu mobil sampai tombol NAIK menyala.</p>
+   <p class="status" id="menustatus">Menyiapkan distrik…</p>
+   <footer class="menu-footer"><a href="/2d/">Mode ringan 2D</a><span>Original assets · no GTA files</span></footer>
+  </section>
+  <section class="identity-card" aria-label="Studio karakter">
+   <div class="identity-heading"><div><span class="micro-label">IDENTITY STUDIO</span><h2>Make your mark.</h2></div><span class="character-count">06 CHARACTERS</span></div>
+   <div id="avatar-stage" aria-label="Preview karakter 3D, geser untuk memutar"><div class="avatar-floor-label"><strong id="avatar-name">Raka</strong><span id="avatar-summary"></span></div><button id="avatar-turn" type="button" class="preview-turn" aria-label="Putar karakter">↻ <span>ROTATE</span></button></div>
+   <div id="customizer">
+    <div id="avatar-presets" aria-label="Pilih karakter"></div>
+    <div class="avatar-tabs" role="tablist"><button type="button" data-avatar-tab="identity" role="tab" aria-selected="true">KARAKTER</button><button type="button" data-avatar-tab="outfit" role="tab" aria-selected="false">PAKAIAN</button></div>
+    <div class="avatar-fields" data-avatar-page="identity">
+     <div class="avatar-field"><label>WARNA KULIT</label><div id="avskin" class="swatches"></div></div>
+     <label class="avatar-field">GAYA RAMBUT<select id="avhair" aria-label="Gaya rambut"></select></label>
+     <div class="avatar-field"><label>WARNA RAMBUT</label><div id="avhaircolor" class="swatches"></div></div>
+     <label class="avatar-field">AKSESORI<select id="avaccessory" aria-label="Aksesori"></select></label>
     </div>
-    <p class="mobile-instructions">Joystick kiri untuk jalan; geser kanan untuk kamera. Tombol FIRE, NAIK, REM, dan VOX siap di layar.</p>
-    <p class="status" id="menustatus">Menyiapkan dunia 3D…</p>
-    <footer class="menu-footer"><a href="/2d/">Mode ringan 2D</a><span>Original city sandbox · no GTA assets</span></footer>
-  </main>
+    <div class="avatar-fields" data-avatar-page="outfit" hidden>
+     <label class="avatar-field">BAJU<select id="avtop" aria-label="Jenis baju"></select></label><div class="avatar-field"><label>WARNA BAJU</label><div id="avtopcolor" class="swatches"></div></div>
+     <label class="avatar-field">CELANA<select id="avbottom" aria-label="Jenis celana"></select></label><div class="avatar-field"><label>WARNA CELANA</label><div id="avbottomcolor" class="swatches"></div></div>
+     <label class="avatar-field">SEPATU<select id="avshoes" aria-label="Jenis sepatu"></select></label><div class="avatar-field"><label>WARNA SEPATU</label><div id="avshoecolor" class="swatches"></div></div>
+    </div>
+    <div class="saved-looks"><div id="lookslots"></div><button id="save-look" type="button" class="secondary small">Simpan look</button></div>
+    <p id="lookstatus" class="look-note">3 look tersimpan di perangkat ini. Penampilan aktif mengikuti progres server.</p>
+   </div>
+  </section>
+ </main>
+ <div class="mobile-lobby-bar" id="mobile-lobby-bar"><label>NAMA WARGA<input id="mobile-nickname" maxlength="16" aria-label="Nama warga mobile" autocomplete="nickname"></label><button type="button" id="mobile-join">MASUK DISTRIK →</button></div>
 </div>
-<script type="module" src="/main.js"></script>
+<script type="module" src="/r/0.3.0/public/main.js"></script>
 </body>
 </html>

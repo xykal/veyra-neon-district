@@ -1,339 +1,192 @@
-// char3d.js — karakter humanoid low-poly + rig animasi (jalan / lari / idle / aim)
-// Semua skala dalam "unit dunia" (1 unit = 1 piksel peta). Karakter ~30 unit = ~1,7 m.
-// Arah depan karakter = +X (bukan +Z), supaya sama dengan model mobil Kenney.
-
+// Original GPU-skinned modular citizens. Front = +X, Y up, 10 units ≈ 1 metre.
+// One vertex-coloured body draw call per citizen, rather than dozens of separate limb meshes.
 import * as THREE from './vendor/three.module.js';
+import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
+import { AVATAR_MODELS, SKIN, FABRIC, DENIM, HAIR, FOOTWEAR, sanitizeAppearance, avatarPalette, appearanceKey } from '../shared/avatar.js';
+export const SKIN_TONES=SKIN,SHIRT_COLORS=FABRIC,PANTS_COLORS=DENIM,HAIR_COLORS=HAIR,SHOE_COLORS=FOOTWEAR;
+const cache=new Map(),TAU=Math.PI*2;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const smooth=(a,b,k)=>a+(b-a)*k;
+const diff=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
+const mixColor=(hex,k)=>new THREE.Color(hex).multiplyScalar(k);
+const capsule=(radius,length)=>{const g=new THREE.CapsuleGeometry(radius,Math.max(.02,length-2*radius),4,8);g.translate(0,-length/2,0);return g;};
+const sharedGun=new THREE.BoxGeometry(2.25,.65,.62);
+const sharedGrip=new THREE.BoxGeometry(.65,1.25,.6);
 
-export const SKIN_TONES = [0xf2cba4, 0xe0aa83, 0xc68642, 0x8d5524, 0x6b4226, 0xffdcb0, 0xd9a06b];
-export const SHIRT_COLORS = [0x3498db, 0xe74c3c, 0x2ecc71, 0xf1c40f, 0x9b59b6, 0x1abc9c, 0xe67e22, 0xecf0f1, 0x34495e, 0xff6f00];
-export const PANTS_COLORS = [0x2c3e50, 0x1f2833, 0x4a4a4a, 0x3b3b3b, 0x5d4037, 0x283747, 0x7f8c8d];
-export const HAIR_COLORS = [0x161616, 0x3b2410, 0x6b4423, 0xa9762f, 0xd9c39a, 0x8b8b8b, 0x4b2f6b, 0x2b2118];
-export const SHOE_COLORS = [0x15171b, 0x2c2c30, 0x6b4a2f, 0xeeeeee];
-
-function mat(color, extra = {}) {
-  return new THREE.MeshLambertMaterial({ color, ...extra });
-}
-
-const geometryCache = new Map();
-function part(geo, material) {
-  const pos = geo.attributes.position.array;
-  const key = geo.type + JSON.stringify(geo.parameters) + ':' + pos[0] + ':' + pos[1] + ':' + pos[2];
-  const shared = geometryCache.get(key);
-  if (shared && shared !== geo) { geo.dispose(); geo = shared; }
-  else if (!shared) geometryCache.set(key, geo);
-  const m = new THREE.Mesh(geo, material);
-  m.castShadow = true;
-  m.receiveShadow = false;
-  return m;
-}
-
-/** Silinder dengan sumbu Y, ujung atas di pivot (0,0,0), panjang ke bawah. */
-function limbGeo(rTop, rBot, len, seg = 7) {
-  const g = new THREE.CylinderGeometry(rTop, rBot, len, seg, 1);
-  g.translate(0, -len / 2, 0);
-  return g;
-}
-
-function angleDiff(a, b) {
-  let d = ((a - b + Math.PI) % (Math.PI * 2)) - Math.PI;
-  if (d < -Math.PI) d += Math.PI * 2;
-  return d;
-}
-
-/**
- * Karakter humanoid: pinggul -> torso -> kepala/lengan, pinggul -> kaki.
- * Semua animasi pakai rotasi pivot ( Groups ), bukan skinning, biar ringan.
- */
 export class Character {
-  constructor(scene, palette = {}) {
-    this.scene = scene;
-    this.pal = {
-      skin: palette.skin ?? SKIN_TONES[0],
-      shirt: palette.shirt ?? SHIRT_COLORS[0],
-      pants: palette.pants ?? PANTS_COLORS[0],
-      hair: palette.hair ?? HAIR_COLORS[0],
-      shoes: palette.shoes ?? SHOE_COLORS[0],
-    };
-    this.root = new THREE.Group();
-    this.phase = 0;
-    this.blink = 0;
-    this.t = 0;
-    this.aimBlend = 0;
-    this.build();
-    scene.add(this.root);
+  constructor(scene,palette={}) {
+    this.scene=scene;this.root=new THREE.Group();this.root.name='Citizen';
+    this.phase=0;this.t=0;this.speed=0;this.aimBlend=0;this.motion='idle';
+    this.appearance=sanitizeAppearance(palette);
+    const p=avatarPalette(this.appearance),legacy=palette.skinColor===undefined&&palette.skin>100;
+    this.pal={skin:legacy?palette.skin:p.skinColor,shirt:palette.shirt??p.shirt,pants:palette.pants>100?palette.pants:p.pants,hair:legacy?palette.hair:p.hairHex,shoes:legacy?palette.shoes:p.shoeHex};
+    this.key=appearanceKey(this.appearance)+':'+Object.values(this.pal).join('.');
+    this.build();scene.add(this.root);
   }
-
   build() {
-    const P = this.pal;
-    const mSkin = mat(P.skin);
-    const mShirt = mat(P.shirt);
-    const mPants = mat(P.pants);
-    const mHair = mat(P.hair);
-    const mShoe = mat(P.shoes);
-    const mDark = mat(0x1b1e24);
-    const mGun = mat(0x2b3038);
-    this.mats = { skin: mSkin, shirt: mShirt, pants: mPants, hair: mHair, shoes: mShoe, dark: mDark, gun: mGun };
-
-    // ---------- pinggul ----------
-    this.hips = new THREE.Group();
-    this.hips.position.y = 13.4;
-    this.root.add(this.hips);
-
-    const hipMesh = part(new THREE.BoxGeometry(4.6, 4.4, 7.2), mPants);
-    hipMesh.position.y = 0.6;
-    this.hips.add(hipMesh);
-
-    // ---------- torso ----------
-    this.torso = new THREE.Group();
-    this.torso.position.y = 2.4;
-    this.hips.add(this.torso);
-
-    const chest = part(new THREE.CylinderGeometry(4.4, 3.7, 10.4, 10), mShirt);
-    chest.position.y = 5.2;
-    chest.scale.set(0.72, 1, 0.6);
-    this.torso.add(chest);
-
-    // jaket/kolom
-    const collar = part(new THREE.CylinderGeometry(2.4, 2.8, 1.5, 8), mat(0x1f2630));
-    collar.position.y = 10.1;
-    collar.scale.set(0.8, 1, 0.7);
-    this.torso.add(collar);
-
-    // ---------- kepala ----------
-    this.neck = new THREE.Group();
-    this.neck.position.y = 10.6;
-    this.torso.add(this.neck);
-
-    const neckMesh = part(limbGeo(1.5, 1.7, 1.6, 6), mSkin);
-    neckMesh.position.y = 1.6;
-    this.neck.add(neckMesh);
-
-    const head = part(new THREE.SphereGeometry(3.35, 14, 11), mSkin);
-    head.position.y = 4.3;
-    head.scale.set(0.95, 1.1, 0.92);
-    this.neck.add(head);
-    this.head = head;
-
-    const hair = part(new THREE.SphereGeometry(3.5, 14, 9, 0, Math.PI * 2, 0, Math.PI * 0.62), mHair);
-    hair.position.y = 4.35;
-    hair.scale.set(0.99, 1.16, 0.95);
-    this.neck.add(hair);
-
-    const fringe = part(new THREE.BoxGeometry(1.4, 1.6, 6.4), mHair);
-    fringe.position.set(2.55, 5.6, 0);
-    this.neck.add(fringe);
-
-    // wajah sederhana: dua mata + mulut
-    const eyeGeo = new THREE.BoxGeometry(0.8, 0.95, 0.5);
-    for (const sz of [1, -1]) {
-      const eye = part(eyeGeo, mDark);
-      eye.position.set(2.85, 4.5, sz * 1.35);
-      this.neck.add(eye);
+    const a=this.appearance,P=this.pal,feminine=a.model>=3;
+    this.bones=[];
+    const bone=(name,parent,x,y,z)=>{const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent?.add(b);this.bones.push(b);return b;};
+    this.hips=bone('hips',null,0,8.4,0);
+    this.torso=bone('spine',this.hips,0,1,0);
+    this.neck=bone('neck',this.torso,0,5,0);
+    const arm=side=>{const shoulder=bone('shoulder'+side,this.torso,0,4.1,side*(feminine?1.8:2.08));const elbow=bone('elbow'+side,shoulder,0,-3.1,0);const hand=bone('hand'+side,elbow,0,-2.65,0);return{shoulder,elbow,hand};};
+    const leg=side=>{const hip=bone('thigh'+side,this.hips,0,0,side*(feminine?1.05:1));const knee=bone('knee'+side,hip,0,-4,0);const ankle=bone('ankle'+side,knee,0,-3.8,0);return{hip,knee,ankle};};
+    this.armL=arm(1);this.armR=arm(-1);this.legL=leg(1);this.legR=leg(-1);
+    this.hips.updateMatrixWorld(true);
+    let item=cache.get(this.key);
+    if(!item) {
+      const parts=[];
+      const add=(g,b,color,x=0,y=0,z=0,scale=null,rot=null)=>{
+        if(scale)g.scale(...scale);if(rot){g.rotateX(rot[0]);g.rotateY(rot[1]);g.rotateZ(rot[2]);}g.translate(x,y,z);g.applyMatrix4(b.matrixWorld);
+        const n=g.attributes.position.count,index=new Uint16Array(n*4),weight=new Float32Array(n*4),colors=new Float32Array(n*3),c=color?.isColor?color:new THREE.Color(color);
+        for(let i=0;i<n;i++){index[i*4]=this.bones.indexOf(b);weight[i*4]=1;colors.set([c.r,c.g,c.b],i*3);}
+        g.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(index,4));g.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weight,4));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));parts.push(g);
+      };
+      const box=(b,c,x,y,z,w,h,d)=>add(new THREE.BoxGeometry(w,h,d),b,c,x,y,z);
+      const sphere=(b,c,x,y,z,r,scale=null)=>add(new THREE.SphereGeometry(r,12,9),b,c,x,y,z,scale);
+      // Pelvis / belt; softly tapered torso instead of a cylinder with disconnected shoulders.
+      sphere(this.hips,P.pants,0,.4,0,1,[1.02,1.2,feminine?1.72:1.6]);
+      box(this.hips,0x292a2b,.02,1.25,0,2.1,.36,3.15);
+      box(this.hips,0xa0a6a6,1.1,1.25,0,.15,.35,.55);
+      const chestColor=a.top===4?mixColor(P.shirt,.66):P.shirt;
+      add(new THREE.CylinderGeometry(feminine?1.9:2.15,1.55,4.8,10),this.torso,chestColor,0,2.4,0,[.63,1,1]);
+      sphere(this.torso,P.shirt,0,4.25,0,1,[1.25,.65,feminine?2:2.2]);
+      if(a.top===1||a.top===3) {
+        box(this.torso,0xd6d3ca,1.19,2.5,0,.2,4.25,1.3);
+        for(const side of[-1,1]){box(this.torso,P.shirt,1.28,2.7,side*1.05,.25,4.6,.95);box(this.torso,mixColor(P.shirt,.75),1.45,2.4,side*1.12,.15,1,.65);}
+        box(this.torso,0x89929a,1.46,3,0,.08,4,.08);
+      }
+      if(a.top===0){box(this.torso,mixColor(P.shirt,.68),1.12,3.1,-.7,.1,.5,.6);}
+      if(a.top===2) {
+        add(new THREE.SphereGeometry(2.12,12,10,-Math.PI/2,Math.PI),this.neck,mixColor(P.shirt,.8),-.12,1.6,0,[1,1.1,.85]);
+        for(const side of[-1,1])box(this.torso,0xd9d4c5,1.3,3.6,side*.45,.07,1.6,.07);
+        box(this.torso,mixColor(P.shirt,.8),1.17,1.25,0,.3,1.15,2.1);
+      }
+      if(a.top===3)for(const side of[-1,1])box(this.torso,mixColor(P.shirt,.7),1.45,3.25,side*1.05,.1,.75,.65);
+      if(a.top===4)for(const side of[-1,1])box(this.torso,P.shirt,1.35,2.2,side*1,.22,2.5,.85);
+      // Face: forward-facing eyes, nose and ears. No facial features on the back of the head.
+      add(new THREE.CylinderGeometry(.65,.78,.85,8),this.neck,P.skin,0,.25,0);
+      sphere(this.neck,P.skin,0,1.65,0,1.3,[.98,1.13,feminine?.84:.89]);
+      for(const side of[-1,1]) {
+        sphere(this.neck,P.skin,0,1.65,side*1.1,.27,[.7,1.15,.8]);
+        sphere(this.neck,0xeee8dc,1.18,1.85,side*.45,.16,[.8,.82,1.2]);
+        sphere(this.neck,0x26343a,1.3,1.85,side*.45,.075);
+        box(this.neck,P.hair,1.22,2.12,side*.45,.09,.1,.43);
+      }
+      add(new THREE.ConeGeometry(.26,.6,7),this.neck,P.skin,1.28,1.42,0,null,[0,0,-Math.PI/2]);
+      box(this.neck,0x935f52,1.26,1.02,0,.08,.09,.44);
+      sphere(this.neck,mixColor(P.skin,.96),.27,.67,0,.86,[1.04,.45,.9]);
+      // Hair styles are geometry, not just a tint.
+      if(a.hair!==6) {
+        add(new THREE.SphereGeometry(1.37,12,9,0,TAU,0,Math.PI*(a.hair===5?.45:.42)),this.neck,P.hair,0,1.7,0,[1.02,1.17,.9]);
+        if([0,1,2].includes(a.hair))box(this.neck,P.hair,1.02,2.56,a.hair===1?.2:0,.65,.42,1.95);
+        if(a.hair===2)for(let k=0;k<4;k++)sphere(this.neck,P.hair,.2-k*.55,3.02,.1,.43,[1,1.2,1.45]);
+        if(a.hair===3||a.hair===4)add(new THREE.SphereGeometry(1.4,12,10,-Math.PI/2,Math.PI),this.neck,P.hair,-.05,1.25,0,[1,1.2,1]);
+        if(a.hair===4){sphere(this.neck,P.hair,-1.4,2.1,0,.6);add(capsule(.55,2.7),this.neck,P.hair,-1.65,1.9,0);}
+        if(a.hair===7)for(let i=0;i<12;i++){const phi=i/12*TAU;sphere(this.neck,P.hair,Math.cos(phi)*1.02,2.75+Math.sin(i*7)*.2,Math.sin(phi)*.95,.46);}
+      }
+      if(a.accessory===1) {
+        for(const side of[-1,1])box(this.neck,0x121b25,1.36,1.85,side*.5,.13,.42,.78);
+        box(this.neck,0x192531,1.4,1.9,0,.1,.1,.3);
+      }
+      if(a.accessory===2){add(new THREE.SphereGeometry(1.45,12,8,0,TAU,0,Math.PI*.49),this.neck,P.shirt,0,1.78,0,[1,1.16,.91]);box(this.neck,P.shirt,1.4,2.43,0,1.75,.15,1.9);}
+      if(a.accessory===3)add(new THREE.SphereGeometry(1.48,12,9,0,TAU,0,Math.PI*.55),this.neck,P.shirt,0,1.9,0,[1,1.2,.94]);
+      for(const arm of[this.armL,this.armR]) {
+        const long=a.top===1||a.top===2||a.top===3;
+        add(capsule(.77,3.1),arm.shoulder,long?P.shirt:P.skin);
+        if(!long)add(capsule(.89,1.6),arm.shoulder,a.top===4?P.skin:P.shirt,0,.05,0);
+        sphere(arm.shoulder,long?P.shirt:P.skin,0,-.3,0,.75);
+        sphere(arm.elbow,long?P.shirt:P.skin,0,0,0,.62);
+        add(capsule(.62,2.65),arm.elbow,long?P.shirt:P.skin);
+        sphere(arm.hand,P.skin,0,-.18,0,.64,[.85,1.15,.7]);
+        if(long)box(arm.hand,mixColor(P.shirt,.6),0,.25,0,1.15,.42,1.05);
+      }
+      for(const leg of[this.legL,this.legR]) {
+        add(capsule(.97,4),leg.hip,P.pants);
+        sphere(leg.knee,a.bottom===2?P.skin:P.pants,0,0,0,.78);
+        add(capsule(a.bottom===3?.72:.83,3.8),leg.knee,a.bottom===2?P.skin:P.pants);
+        if(a.bottom===1)box(leg.hip,mixColor(P.pants,.82),.05,-2.3,Math.sign(leg.hip.position.z)*.87,1.1,1.2,.4);
+        if(a.bottom===2)box(leg.hip,P.pants,0,-2.5,0,1.7,.6,1.65);
+        const boot=a.shoes===1;
+        if(boot)add(capsule(.83,1.65),leg.ankle,P.shoes,0,1.65,0);
+        box(leg.ankle,P.shoes,.66,-.02,0,2.6,boot?1.25:.95,1.65);
+        box(leg.ankle,a.shoes===3?0x15171a:0xc8c8c4,.66,-.57,0,2.7,.25,1.7);
+      }
+      const geometry=mergeGeometries(parts,false);for(const part of parts)part.dispose();
+      geometry.computeBoundingSphere();item={geometry,refs:0};cache.set(this.key,item);
     }
-    const mouth = part(new THREE.BoxGeometry(0.5, 0.5, 1.6), mat(0x9c5b4a));
-    mouth.position.set(2.9, 3.0, 0);
-    this.neck.add(mouth);
-
-    // ---------- lengan ----------
-    const makeArm = (side) => {
-      const shoulder = new THREE.Group();
-      shoulder.position.set(0, 9.2, side * 3.1);
-      this.torso.add(shoulder);
-      const upper = part(limbGeo(1.95, 1.6, 5.8), mShirt);
-      shoulder.add(upper);
-      const elbow = new THREE.Group();
-      elbow.position.y = -5.8;
-      shoulder.add(elbow);
-      const lower = part(limbGeo(1.5, 1.2, 5.4), mSkin);
-      elbow.add(lower);
-      const hand = new THREE.Group();
-      hand.position.y = -5.4;
-      elbow.add(hand);
-      const palm = part(new THREE.SphereGeometry(1.4, 8, 6), mSkin);
-      palm.scale.set(1.0, 1.15, 0.75);
-      hand.add(palm);
-      return { shoulder, elbow, hand };
+    item.refs++;this.cacheItem=item;
+    this.material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.82,metalness:.025});
+    this.mesh=new THREE.SkinnedMesh(item.geometry,this.material);this.mesh.name='Skinned citizen body';this.mesh.frustumCulled=false;
+    this.mesh.castShadow=true;this.mesh.receiveShadow=true;this.mesh.add(this.hips);this.root.add(this.mesh);
+    this.mesh.bind(new THREE.Skeleton(this.bones));
+    const m=AVATAR_MODELS[a.model];this.root.scale.set(m.depth,m.height,m.width);
+    this.gun=new THREE.Group();
+    this.gunMaterial=new THREE.MeshStandardMaterial({color:0x252c34,roughness:.45,metalness:.45});
+    const slide=new THREE.Mesh(sharedGun,this.gunMaterial);slide.position.x=.8;this.gun.add(slide);
+    const grip=new THREE.Mesh(sharedGrip,this.gunMaterial);grip.position.set(0,-.5,0);this.gun.add(grip);
+    this.muzzle=new THREE.Object3D();this.muzzle.position.set(2,0,0);this.gun.add(this.muzzle);
+    this.armR.hand.add(this.gun);this.gun.visible=false;
+  }
+  setOpacity(value){this.material.transparent=value<.99;this.material.opacity=value;this.material.depthWrite=value>=.99;}
+  update(dt,s) {
+    this.t+=dt;const k=1-Math.exp(-dt*11),targetSpeed=clamp(Math.abs(s.speed||0),0,80);
+    this.speed=smooth(this.speed,targetSpeed,k);const moving=clamp(this.speed/8,0,1),run=clamp((this.speed-28)/32,0,1);
+    const stride=15+13*run;this.phase+=this.speed*dt/stride*TAU;
+    const face=Number.isFinite(s.facing)?s.facing:0;
+    this.root.position.set(s.x,s.height||0,s.y);this.root.rotation.set(0,-face,0);
+    this.aimBlend=smooth(this.aimBlend,s.aim?1:0,1-Math.exp(-dt*14));const aim=this.aimBlend;
+    this.gun.visible=aim>.08&&!s.seated;
+    const delta=s.moveAngle===undefined?0:clamp(diff(s.moveAngle,face),-.75,.75);
+    this.hips.rotation.y=-delta*aim*.45;
+    const bounce=Math.sin(this.phase*2)*(.1+run*.17)*moving;
+    this.hips.position.y=8.4-moving*(.78+run*.72)+bounce;
+    this.hips.rotation.x=Math.sin(this.phase)*.035*moving;
+    this.torso.rotation.z=-run*.12*moving+Math.sin(this.t*1.9)*.008*(1-moving);
+    this.torso.rotation.y=-this.hips.rotation.y*.9+Math.sin(this.phase)*.035*moving*(1-aim);
+    this.neck.rotation.y=-this.torso.rotation.y*.5;this.neck.rotation.z=-this.torso.rotation.z*.45;
+    const poseLeg=(leg,offset)=>{
+      let u=((this.phase/TAU+offset)%1+1)%1,stance=.52-run*.12;
+      let x=0,lift=0;
+      if(u<stance)x=(.5-u/stance)*stride*stance;
+      else {const f=(u-stance)/(1-stance),ease=f*f*(3-2*f);x=(-.5+ease)*stride*stance;lift=Math.sin(f*Math.PI)*(1.15+run*1.5);}
+      x*=moving;lift*=moving;
+      const dy=this.hips.position.y-(.72+lift),maxX=Math.sqrt(Math.max(.01,7.77*7.77-dy*dy));x=clamp(x,-maxX,maxX);
+      const dist=clamp(Math.hypot(x,dy),.5,7.79);
+      const hip=Math.atan2(x,dy)+Math.acos(clamp((16+dist*dist-14.44)/(8*dist),-1,1));
+      const knee=-(Math.PI-Math.acos(clamp((16+14.44-dist*dist)/(30.4),-1,1)));
+      leg.hip.rotation.set(0,0,hip);leg.knee.rotation.set(0,0,knee);leg.ankle.rotation.set(0,0,-hip-knee);
     };
-    this.armL = makeArm(1);
-    this.armR = makeArm(-1);
-
-    // pistol di tangan kanan
-    this.gun = new THREE.Group();
-    const gunBody = part(new THREE.BoxGeometry(6.2, 1.7, 1.7), mGun);
-    gunBody.position.set(2.6, 0, 0);
-    this.gun.add(gunBody);
-    const gunGrip = part(new THREE.BoxGeometry(1.5, 2.6, 1.5), mGun);
-    gunGrip.position.set(-0.1, -1.5, 0);
-    this.gun.add(gunGrip);
-    const gunBarrel = part(new THREE.CylinderGeometry(0.5, 0.5, 1.6, 6), mat(0x15181d));
-    gunBarrel.rotation.z = Math.PI / 2;
-    gunBarrel.position.set(6.0, 0.1, 0);
-    this.gun.add(gunBarrel);
-    this.gun.position.set(0.4, -0.6, 0);
-    this.armR.hand.add(this.gun);
-
-    // ---------- kaki ----------
-    const makeLeg = (side) => {
-      const hip = new THREE.Group();
-      hip.position.set(0, 0.4, side * 1.95);
-      this.hips.add(hip);
-      const thigh = part(limbGeo(2.35, 1.85, 6.8), mPants);
-      hip.add(thigh);
-      const knee = new THREE.Group();
-      knee.position.y = -6.8;
-      hip.add(knee);
-      const shin = part(limbGeo(1.8, 1.35, 6.5), mPants);
-      knee.add(shin);
-      const ankle = new THREE.Group();
-      ankle.position.y = -6.5;
-      knee.add(ankle);
-      const shoe = part(new THREE.BoxGeometry(5.0, 1.6, 2.9), mShoe);
-      shoe.position.set(0.9, -0.7, 0);
-      ankle.add(shoe);
-      const sole = part(new THREE.BoxGeometry(5.1, 0.5, 3.0), mat(0x0f1114));
-      sole.position.set(0.9, -1.5, 0);
-      ankle.add(sole);
-      return { hip, knee, ankle };
-    };
-    this.legL = makeLeg(1);
-    this.legR = makeLeg(-1);
-  }
-
-  /** Ganti warna kulit/baju (dipakai kalau rebirth / ganti Vehicles). */
-  setPalette(p) {
-    if (!p) return;
-    Object.assign(this.pal, p);
-    if (this.mats) {
-      if (p.skin !== undefined) { this.mats.skin.color.setHex(p.skin); this.mats.hair.color.setHex(p.hair); }
-      if (p.shirt !== undefined) this.mats.shirt.color.setHex(p.shirt);
-      if (p.pants !== undefined) this.mats.pants.color.setHex(p.pants);
-      if (p.shoes !== undefined) this.mats.shoes.color.setHex(p.shoes);
+    poseLeg(this.legL,0);poseLeg(this.legR,.5);
+    const swing=Math.sin(this.phase)*(.3+run*.5)*moving;
+    for(const [arm,sign]of[[this.armL,-1],[this.armR,1]]) {
+      const shoulder=swing*sign*(1-aim)+(arm===this.armR?1.4:1.05)*aim;
+      const elbow=(-.12-run*.5)*(1-aim)+(arm===this.armR?-.25:-.85)*aim;
+      arm.shoulder.rotation.set(Math.sin(this.t*1.3)*.02,0,shoulder);
+      arm.elbow.rotation.set(0,0,elbow);arm.hand.rotation.set(0,0,-(shoulder+elbow)*aim);
     }
-  }
-
-  /**
-   * @param {number} dt detik
-   * @param {object} s {x, y, facing, aim, aimAngle, moveAngle, speed}
-   */
-  update(dt, s) {
-    this.t += dt;
-    const speed = Math.abs(s.speed || 0);
-    const run = Math.min(1, Math.max(0, (speed - 185) / 95));
-    const walk = Math.min(1, speed / 120);
-    this.phase += speed * dt * 0.075;
-
-    // posisi & arah
-    this.root.position.set(s.x, 0, s.y);
-    const face = s.aim ? (s.aimAngle ?? s.facing) : s.facing;
-    this.root.rotation.z = 0;
-    this.root.rotation.y = -face;
-
-    // blend pose aim
-    const wantAim = s.aim ? 1 : 0;
-    this.aimBlend += (wantAim - this.aimBlend) * Math.min(1, dt * 12);
-    const aim = this.aimBlend;
-
-    // pinggul ikut arah jalan (bisa strafe)
-    if (s.moveAngle !== undefined && s.moveAngle !== null) {
-      let d = angleDiff(s.moveAngle, face);
-      d = Math.max(-0.85, Math.min(0.85, d));
-      this.hips.rotation.y = d * (1 - aim * 0.55);
-    } else {
-      this.hips.rotation.y = 0;
+    this.motion=aim>.5?'aim':this.speed<.8?'idle':this.speed<20?'walk':run>.45?'sprint':'jog';
+    if(s.seated) {
+      this.motion=s.seated==='bike'?'riding':'seated';this.hips.position.y=s.seated==='bike'?8.1:5.8;this.hips.rotation.set(0,0,0);this.torso.rotation.set(0,0,s.seated==='bike'?-.18:0);
+      for(const leg of[this.legL,this.legR]){leg.hip.rotation.z=1.2;leg.knee.rotation.z=-1.75;leg.ankle.rotation.z=.55;}
+      for(const arm of[this.armL,this.armR]){arm.shoulder.rotation.z=1.05;arm.elbow.rotation.z=-.5;arm.hand.rotation.z=-.55;}
     }
-
-    const ph = this.phase;
-    const amp = (0.30 + 0.55 * run) * Math.min(1, walk * 1.6);
-    const swing = Math.sin(ph) * amp;
-    const bob = Math.abs(Math.sin(ph)) * (0.9 + run * 0.9);
-
-    // ---- kaki ----
-    const kneeBend = 0.12 + run * 0.35;
-    this.legL.hip.rotation.z = swing;
-    this.legR.hip.rotation.z = -swing;
-    this.legL.knee.rotation.z = -Math.max(0, Math.sin(ph + 1.0)) * (0.5 + 0.7 * run) - kneeBend * 0.4;
-    this.legR.knee.rotation.z = -Math.max(0, Math.sin(ph + 1.0 + Math.PI)) * (0.5 + 0.7 * run) - kneeBend * 0.4;
-    this.legL.ankle.rotation.z = Math.max(0, -Math.sin(ph + 0.4)) * 0.45;
-    this.legR.ankle.rotation.z = Math.max(0, -Math.sin(ph + 0.4 + Math.PI)) * 0.45;
-
-    // ---- badan ----
-    this.hips.position.y = 13.4 + bob - run * 0.8;
-    this.torso.rotation.z = -run * 0.16 + Math.sin(this.t * 1.3) * 0.01;
-    this.torso.rotation.y = Math.sin(ph) * 0.07 * (1 - aim);
-    this.torso.scale.y = 1 + Math.sin(this.t * 1.9) * 0.012 * (1 - walk);
-
-    // ---- lengan ----
-    // jalan: lengan berayun berlawanan kaki
-    const armSwing = -swing * 0.62;
-    this.armL.shoulder.rotation.z = armSwing;
-    this.armR.shoulder.rotation.z = -armSwing;
-    this.armL.elbow.rotation.z = -0.28 - run * 0.35;
-    this.armR.elbow.rotation.z = -0.28 - run * 0.35;
-    this.armL.shoulder.rotation.x = 0;
-    this.armR.shoulder.rotation.x = 0;
-
-    // aim: lengan kanan nunjuk ke depan, lengan kiri pegang
-    if (aim > 0.001) {
-      const aimPose = (o, target) => { o.rotation.z = o.rotation.z * (1 - aim) + target * aim; };
-      aimPose(this.armR.shoulder, -1.42);
-      aimPose(this.armR.elbow, -0.12);
-      aimPose(this.armL.shoulder, -0.95);
-      aimPose(this.armL.elbow, -1.05);
-      this.torso.rotation.y = this.torso.rotation.y * (1 - aim) + 0.18 * aim;
-      // kepala sedikit)};
-      this.neck.rotation.y = -0.12 * aim;
-    } else {
-      this.neck.rotation.y *= 0.85;
-    }
-
-    // jalan bolak-balik kecil di lengan idle
-    this.armL.shoulder.rotation.x = Math.sin(this.t * 1.4) * 0.03;
-    this.armR.shoulder.rotation.x = Math.sin(this.t * 1.4 + 1) * 0.03;
+    this.root.updateMatrixWorld(true);
   }
-
-  /** Posisi muzzle buat efek tembakan (koordinat dunia). */
-  muzzleWorld(out = new THREE.Vector3()) {
-    this.gun.getWorldPosition(out);
-    out.x += 5.5;
-    return out;
-  }
-
+  muzzleWorld(out=new THREE.Vector3()){this.root.updateMatrixWorld(true);return this.muzzle.getWorldPosition(out);}
   dispose() {
-    this.scene.remove(this.root);
-    const materials = new Set();
-    this.root.traverse((o) => {
-      if (o.isMesh) materials.add(o.material);
-    });
-    for (const material of materials) material.dispose();
+    this.scene.remove(this.root);this.material.dispose();this.gunMaterial.dispose();this.mesh.skeleton.dispose();this.cacheItem.refs--;
+    if(cache.size>48)for(const[key,value]of cache)if(!value.refs){value.geometry.dispose();cache.delete(key);if(cache.size<=40)break;}
   }
 }
-
-/** Kelola banyak karakter (pemain + NPC) dengan palet & animasi. */
 export class CharacterManager {
-  constructor(scene) {
-    this.scene = scene;
-    this.chars = new Map();
+  constructor(scene){this.scene=scene;this.chars=new Map();}
+  ensure(id,palette){
+    let c=this.chars.get(id);const key=JSON.stringify(palette);
+    if(c&&c.paletteKey!==key){c.dispose();this.chars.delete(id);c=null;}
+    if(!c){c=new Character(this.scene,palette);c.paletteKey=key;this.chars.set(id,c);}return c;
   }
-
-  /** @param {string|number} id @param {object} palette */
-  ensure(id, palette) {
-    let c = this.chars.get(id);
-    if (!c) {
-      c = new Character(this.scene, palette);
-      this.chars.set(id, c);
-    }
-    return c;
-  }
-
-  remove(id) {
-    const c = this.chars.get(id);
-    if (c) { c.dispose(); this.chars.delete(id); }
-  }
-
-  /** Buang karakter yang gak ada di snapshot. */
-  prune(validIds) {
-    for (const id of [...this.chars.keys()]) {
-      if (!validIds.has(id)) this.remove(id);
-    }
-  }
+  remove(id){const c=this.chars.get(id);if(c){c.dispose();this.chars.delete(id);}}
+  prune(ids){for(const id of this.chars.keys())if(!ids.has(id))this.remove(id);}
 }

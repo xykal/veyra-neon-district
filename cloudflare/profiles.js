@@ -1,7 +1,8 @@
 // SQLite-backed Durable Object progression. Only profile hashes, never raw bearer tokens.
+import { sanitizeAppearance } from '../shared/avatar.js';
 import { ProfileModel, digest } from '../server/profile-model.js';
 
-const FIELDS = ['name','money','kills','deaths','jobs','dist','best','time','updated'];
+const FIELDS = ['name','money','kills','deaths','jobs','dist','best','time','updated','appearance'];
 export class SqlProfiles extends ProfileModel {
   constructor(storage) {
     super();
@@ -13,6 +14,8 @@ export class SqlProfiles extends ProfileModel {
       dist INTEGER NOT NULL, best INTEGER NOT NULL, time INTEGER NOT NULL,
       updated INTEGER NOT NULL, score INTEGER NOT NULL
     )`);
+    // Additive schema migration: existing wallets/identities are never dropped.
+    if(!this.sql.exec('PRAGMA table_info(profiles)').toArray().some(c=>c.name==='appearance'))this.sql.exec("ALTER TABLE profiles ADD COLUMN appearance TEXT NOT NULL DEFAULT '{}'");
     this.sql.exec('CREATE INDEX IF NOT EXISTS profiles_rank ON profiles(score DESC, name ASC)');
   }
   resume(token) {
@@ -40,9 +43,9 @@ export class SqlProfiles extends ProfileModel {
         for (const [key, r] of this.rows) {
           const score = r.money + r.kills * 100 + r.jobs * 50;
           this.sql.exec(`INSERT INTO profiles (key, ${FIELDS.join(',')}, score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(key) DO UPDATE SET ${FIELDS.map(f => `${f}=excluded.${f}`).join(',')}, score=excluded.score`,
-            key, ...FIELDS.map(f => r[f]), score);
+            key, ...FIELDS.map(f => f==='appearance'?JSON.stringify(sanitizeAppearance(r.appearance)):r[f]), score);
         }
       });
     }

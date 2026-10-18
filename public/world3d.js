@@ -444,7 +444,7 @@ export function buildWorld(map, scene, qualityOpt) {
   acPool.end();
 
   // ---------- pohon ----------
-  const trunkGeo = new THREE.CylinderGeometry(2.2, 3, 1, 6);
+  const trunkGeo = new THREE.CylinderGeometry(1, 1.3, 1, 6);
   trunkGeo.translate(0, 0.5, 0);
   const trunkPool = new ColorPool(group, trunkGeo, 400);
   const leafGeo = new THREE.SphereGeometry(1, 7, 5);
@@ -453,7 +453,7 @@ export function buildWorld(map, scene, qualityOpt) {
   leafPool.begin();
   for (const t of map.trees) {
     const th = t.r * 2.2;
-    m4.compose(v.set(t.x, 0, t.y), q, s.set(t.r * 0.18, th, t.r * 0.18));
+    m4.compose(v.set(t.x, 0, t.y), q, s.set(t.r * 0.14, th, t.r * 0.14));
     trunkPool.push('#4a3a2a', m4);
     m4.compose(v.set(t.x, th + t.r * 0.9, t.y), q, s.set(t.r, t.r * 1.15, t.r));
     leafPool.push(t.tone, m4);
@@ -585,14 +585,14 @@ export function buildWorld(map, scene, qualityOpt) {
   const benchSeat = new ShapePool(group, new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x8a5a2b }), 200);
   let propIdx = 0;
   for (const pr of map.props) {
-    if (pStep > 1 && (propIdx++ % pStep) !== 0) continue;
+    // Collidable props are never removed by a quality tier.
     if (pr.type === 'bench') {
       const rot = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, pr.a || 0, 0));
-      m4.compose(v.set(pr.x, 7, pr.y), rot, s.set(34, 2.2, 12));
+      m4.compose(v.set(pr.x, 4.7, pr.y), rot, s.set(20, 1.4, 6));
       benchSeat.push(m4);
-      m4.compose(v.set(pr.x - Math.cos(pr.a || 0) * 12, 3.5, pr.y - Math.sin(pr.a || 0) * 12), rot, s.set(4, 7, 4));
+      m4.compose(v.set(pr.x - Math.cos(pr.a || 0) * 7, 2.4, pr.y + Math.sin(pr.a || 0) * 7), rot, s.set(2, 4.8, 2));
       propMetal.push(m4);
-      m4.compose(v.set(pr.x + Math.cos(pr.a || 0) * 12, 3.5, pr.y + Math.sin(pr.a || 0) * 12), rot, s.set(4, 7, 4));
+      m4.compose(v.set(pr.x + Math.cos(pr.a || 0) * 7, 2.4, pr.y - Math.sin(pr.a || 0) * 7), rot, s.set(2, 4.8, 2));
       propMetal.push(m4);
     } else if (pr.type === 'light') {
       // tiang lampu jalan + armatur
@@ -610,21 +610,21 @@ export function buildWorld(map, scene, qualityOpt) {
         const pz = cz + sz * (RW / 2 + 16);
         const roll = (i * 7 + j * 13 + idx) % 5;
         if (roll === 0) {
-          m4.compose(v.set(px, 6, pz), q, s.set(5, 12, 5));
+          m4.compose(v.set(px, 3.9, pz), q, s.set(3.25, 7.8, 3.25));
           propRed.push(m4);
-          m4.compose(v.set(px, 13, pz), q, s.set(7, 3, 7));
+          m4.compose(v.set(px, 8.45, pz), q, s.set(4.55, 1.95, 4.55));
           propRed.push(m4);
         } else if (roll === 1) {
-          m4.compose(v.set(px, 9, pz), q, s.set(5.5, 18, 5.5));
+          m4.compose(v.set(px, 5.85, pz), q, s.set(3.575, 11.7, 3.575));
           propGreen.push(m4);
-          m4.compose(v.set(px, 19, pz), q, s.set(6.5, 2.5, 6.5));
+          m4.compose(v.set(px, 12.35, pz), q, s.set(4.225, 1.625, 4.225));
           propGreen.push(m4);
         } else if (roll === 2) {
-          m4.compose(v.set(px, 16, pz), q, s.set(80, 5, 10));
+          m4.compose(v.set(px, 26, pz), q, s.set(45, 3, 12));
           propBoard.push(m4);
-          m4.compose(v.set(px - 30, 8, pz), q, s.set(5, 16, 5));
+          m4.compose(v.set(px - 17.5, 12.5, pz), q, s.set(3, 25, 3));
           propMetal.push(m4);
-          m4.compose(v.set(px + 30, 8, pz), q, s.set(5, 16, 5));
+          m4.compose(v.set(px + 17.5, 12.5, pz), q, s.set(3, 25, 3));
           propMetal.push(m4);
         }
       });

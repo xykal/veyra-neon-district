@@ -1,6 +1,6 @@
 // GPS kota: cari tempat (POI), bikin rute jalan, marker tujuan 3D, dan rute di minimap.
 import * as THREE from './vendor/three.module.js';
-import { routeBetween } from '/shared/map.js';
+import { routeBetween } from '../shared/map.js';
 
 const SYNONYMS = {
   bank: ['bank', 'uang', 'atm', 'tabungan', 'bengkel'],

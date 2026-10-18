@@ -1,8 +1,8 @@
 // Renderer canvas: peta kota + entitas (pemain, mobil) + minimap.
 
-import { CAR_TYPES } from '/shared/constants.js';
-import { COLORS } from '/shared/map.js';
-import { lerp, lerpAngle, clamp } from '/shared/physics.js';
+import { CAR_TYPES } from '../../shared/constants.js';
+import { COLORS } from '../../shared/map.js';
+import { lerp, lerpAngle, clamp } from '../../shared/physics.js';
 
 const INTERP_DELAY = 110; // ms
 

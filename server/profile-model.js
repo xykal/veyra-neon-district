@@ -1,4 +1,5 @@
 // Shared profile rules for filesystem Node hosting and Cloudflare SQLite storage.
+import { sanitizeAppearance } from '../shared/avatar.js';
 import { createHash, randomBytes } from 'node:crypto';
 
 export const bounded = (v, max = 1e9) => Number.isFinite(v) ? Math.max(0, Math.min(max, v)) : 0;
@@ -16,6 +17,7 @@ export class ProfileModel {
     player.profileKey = session.key;
     const d = session.data;
     if (!d) return;
+    player.appearance=sanitizeAppearance(d.appearance);
     player.money = Math.round(bounded(d.money));
     player.kills = Math.floor(bounded(d.kills, 1e6));
     player.deaths = Math.floor(bounded(d.deaths, 1e6));
@@ -25,6 +27,7 @@ export class ProfileModel {
   record(p) {
     if (!p?.profileKey) return;
     this.rows.set(p.profileKey, {
+      appearance:sanitizeAppearance(p.appearance),
       name: p.name, money: Math.round(bounded(p.money)), kills: Math.floor(bounded(p.kills)),
       deaths: Math.floor(bounded(p.deaths)), jobs: Math.floor(bounded(p.stats?.jobs)),
       dist: Math.round(bounded(p.stats?.dist, 1e12)), best: Math.round(bounded(p.stats?.best, 5000)),

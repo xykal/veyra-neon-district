@@ -1,5 +1,7 @@
 // The same authoritative world + session protocol on Node TCP and Cloudflare WebSockets.
 import { Game } from '../shared/game.js';
+import { RELEASE } from '../shared/version.js';
+import { sanitizeAppearance,packAppearance } from '../shared/avatar.js';
 import { MSG } from '../shared/constants.js';
 
 export class WorldRoom {
@@ -47,11 +49,14 @@ export class WorldRoom {
         if (session.data) session = profiles.resume(session.token);
         const name = String(msg.n || 'Warga').slice(0, 64).replace(/[^\p{L}\p{N}_ .-]/gu, '').trim().slice(0, 16) || 'Warga';
         player = game.addPlayer(name, id);
-        profiles.restore(player, session); profiles.record(player);
+        profiles.restore(player, session);
+        if(msg.o!==undefined)player.appearance=sanitizeAppearance(msg.o,player.appearance);
+        profiles.record(player);
         clearTimeout(helloTimer);
         this.onJoin?.(player);
-        conn.send(JSON.stringify({ t:MSG.WELCOME, id:player.id, name:player.name, seed:game.seed, r:session.token, voice:{ iceServers:this.iceServers, limit:8 } }));
+        conn.send(JSON.stringify({ t:MSG.WELCOME, id:player.id, name:player.name, ver:RELEASE, seed:game.seed, r:session.token, o:packAppearance(player.appearance), voice:{ iceServers:this.iceServers, limit:8 } }));
         this.broadcast({ t:MSG.SYSTEM, m:`${player.name} masuk distrik.` });
+        if(msg.v!==RELEASE)conn.send(JSON.stringify({t:MSG.SYSTEM,m:'Update distrik v'+RELEASE+' tersedia. Refresh halaman untuk studio karakter dan kontrol baru.'}));
         game.sendLeaderboard(player); return;
       }
       if (!player) return;

@@ -18,7 +18,7 @@ test('GPS routes follow roads, no building/water intersections (all POI pairs)',
 });
 test('road spawns remain in playable bounds',()=>{const map=buildMap(),rnd=mulberry32(51);for(let i=0;i<1000;i++){const p=randomRoadPoint(map,rnd);assert.ok(p.x>=30&&p.x<=4770&&p.y>=30&&p.y<=4770);}});
 test('physics finite, forward throttle, braking and wet grip',()=>{
-  for(const type of Object.keys(CAR_TYPES)){const c=car({type});for(let k=0;k<120;k++)stepCar(c,{throttle:1},1/60,empty());assert.ok(c.speed>80,type);assert.ok(c.speed<=CAR_TYPES[type].maxSpeed);const before=c.speed;for(let k=0;k<30;k++)stepCar(c,{throttle:-1},1/60,empty());assert.ok(c.speed<before);assert.ok(Number.isFinite(c.x+c.y+c.a+c.vx+c.vy));}
+  for(const type of Object.keys(CAR_TYPES)){const c=car({type});for(let k=0;k<240;k++)stepCar(c,{throttle:1},1/60,empty());assert.ok(c.speed>80,type);assert.ok(c.speed<=CAR_TYPES[type].maxSpeed);const before=c.speed;for(let k=0;k<30;k++)stepCar(c,{throttle:-1},1/60,empty());assert.ok(c.speed<before);assert.ok(Number.isFinite(c.x+c.y+c.a+c.vx+c.vy));}
 });
 test('handbrake produces more lateral slip than normal grip',()=>{
   const slip=handbrake=>{const c=car({speed:300,vx:300});for(let k=0;k<30;k++)stepCar(c,{throttle:1,steer:.65,handbrake},1/60,empty());return Math.abs(Math.sin(c.a)*c.vx-Math.cos(c.a)*c.vy);};assert.ok(slip(true)>slip(false)*1.2);

@@ -55,3 +55,13 @@ test('fragmented valid text handled; interleaved ping does not corrupt JSON',asy
 });
 test('oversized WS messages are bounded',async t=>{const a=await start(t),x=new Client(a.port);await x.ready;x.socket.write(clientFrame('x'.repeat(70000)));await x.closed;assert.equal(x.code,1009);});
 test('input flooding is closed, not queued unboundedly',async t=>{const a=await start(t),x=new Client(a.port);await x.hello();const frame=clientFrame(JSON.stringify({t:'in',i:{mx:0}}));x.socket.write(Buffer.concat(Array(500).fill(frame)));await x.closed;assert.equal(x.code,1008);});
+
+test('character/outfit is validated, replicated, saved and restored across a Node restart',async t=>{
+ const dir=mkdtempSync(path.join(os.tmpdir(),'veyra-look-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ const a=await start(t,dir),x=new Client(a.port);await x.ready;
+ const look=[3,4,3,2,2,7,1,4,1,2,1];x.send({t:'hello',n:'Styled',o:look});const welcome=await x.message(m=>m.t==='welcome');assert.deepEqual(welcome.o,look);
+ const y=new Client(a.port);await y.hello('Observer');await y.message(m=>m.t==='s'&&m.p.some(p=>p.i===welcome.id&&p.o[0]===3));
+ x.send({t:'look',o:[5,2,4,3,1,4,3,2,0,0,2]});await y.message(m=>m.t==='s'&&m.p.some(p=>p.i===welcome.id&&p.o[0]===5));
+ await x.close();await y.close();await a.close();
+ const b=await start(t,dir),z=new Client(b.port),again=await z.hello('StyledAgain',welcome.r);assert.equal(again.o[0],5);assert.equal(again.o[6],3);await z.close();
+});

@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { acceptWebSocket } from './wsserver.js';
 import { Profiles } from './profiles.js';
 import { WorldRoom } from './room.js';
+import { RELEASE } from '../shared/version.js';
 import { TICK_HZ } from '../shared/constants.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,7 +36,9 @@ export function createApp(options = {}) {
     if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { Allow:'GET, HEAD' }); return res.end(); }
     let pathname;
     try { pathname = decodeURIComponent(new URL(req.url, 'http://local').pathname); } catch { res.writeHead(400); return res.end(); }
-    if (pathname === '/healthz') return json(res, 200, { ok: true, game: 'veyra-neon-district', players: game.players.size, uptime: Math.floor(process.uptime()) });
+    const releasePath=pathname.match(/^\/r\/([^/]+)\/(public|shared)(\/.*)$/);
+    if(releasePath){if(releasePath[1]!==RELEASE){res.writeHead(404);return res.end();}pathname=(releasePath[2]==='shared'?'/shared':'')+releasePath[3];}
+    if (pathname === '/healthz') return json(res, 200, { ok: true, game: 'veyra-neon-district', version:RELEASE, players: game.players.size, uptime: Math.floor(process.uptime()) });
     if (pathname === '/api/leaderboard') return json(res, 200, { rows: profiles.top(25, game.players.values()) });
     if (pathname.includes('\0') || pathname.split('/').some(s => s.startsWith('.'))) { res.writeHead(404); return res.end('Not found'); }
     const base = pathname.startsWith('/shared/') ? ROOT : path.join(ROOT, 'public');
@@ -55,7 +58,7 @@ export function createApp(options = {}) {
       }
       const ext = path.extname(file);
       const isHTML = ext === '.html';
-      const headers = { 'Content-Type':MIME[ext] || 'application/octet-stream', 'Cache-Control': isHTML ? 'no-cache' : 'public, max-age=3600, must-revalidate', ETag:entry.etag, Vary:'Accept-Encoding' };
+      const headers = { 'Content-Type':MIME[ext] || 'application/octet-stream', 'Cache-Control': isHTML ? 'no-cache' : releasePath?'public, max-age=31536000, immutable':'no-cache', ETag:entry.etag, Vary:'Accept-Encoding' };
       if (req.headers['if-none-match'] === entry.etag) { res.writeHead(304, headers); return res.end(); }
       const zipped = entry.zip && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
       const body = zipped ? entry.zip : entry.raw;

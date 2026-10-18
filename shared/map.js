@@ -227,7 +227,7 @@ export function buildMap(seed = 20251018) {
 
   // Blocker untuk tabrakan: bangunan + air (+ trotoar dibatasi tangan)
   const blockers = [];
-  for (const b of buildings) blockers.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+  for (const b of buildings) blockers.push({ x: b.x, y: b.y, w: b.w, h: b.h, top:Math.max(14,b.height*8) });
   for (const w of water) blockers.push({ x: w.x, y: w.y, w: w.w, h: w.h });
 
   // ---- POI (tujuan GPS) ----
@@ -270,6 +270,26 @@ export function buildMap(seed = 20251018) {
     });
   }
 
+  // Ground-contact props are distinct from building/water blockers used by GPS.
+  // Rendering and these footprints must agree at every graphics tier.
+  const solidProps = [];
+  const box = (x,y,w,h,kind) => solidProps.push({x:x-w/2,y:y-h/2,w,h,kind});
+  for (const tree of trees) { const r=tree.r*.182; box(tree.x,tree.y,2*r,2*r,'tree'); }
+  for (const pr of props) {
+    if(pr.type==='light') box(pr.x,pr.y,2.8,2.8,'pole');
+    if(pr.type==='bench') { const a=pr.a||0,w=Math.abs(Math.cos(a))*20+Math.abs(Math.sin(a))*6,h=Math.abs(Math.sin(a))*20+Math.abs(Math.cos(a))*6; box(pr.x,pr.y,w,h,'bench'); }
+  }
+  for(let i=0;i<=n;i++)for(let j=0;j<=n;j++) {
+    const cx=i*CELL,cy=j*CELL;
+    [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sy],idx)=>{
+      const x=cx+sx*(ROAD_W/2+16),y=cy+sy*(ROAD_W/2+16),kind=(i*7+j*13+idx)%5;
+      if(kind===0)box(x,y,9.1,9.1,'hydrant');
+      if(kind===1)box(x,y,8.45,8.45,'bin');
+      if(kind===2){box(x-17.5,y,3,3,'bus-stop');box(x+17.5,y,3,3,'bus-stop');}
+    });
+    for(const [sx,sy]of[[-1,-1],[1,1]])box(cx+sx*(ROAD_W/2+12),cy+sy*(ROAD_W/2+12),2.2,2.2,'signal');
+  }
+  const solids=[...blockers,...solidProps];
   const map = {
     seed,
     size: S,
@@ -286,6 +306,9 @@ export function buildMap(seed = 20251018) {
     props,
     spawns,
     blockers,
+    solidProps,
+    solids,
+    solidGrid: buildGrid(solids, S),
     grid: buildGrid(blockers, S),
   };
   return map;
@@ -373,8 +396,9 @@ function buildGrid(rects, size, cellSize = 300) {
 }
 
 /** Ambil daftar blocker di sekitar titik */
-export function nearbyBlockers(map, x, y, radius = 80) {
-  const g = map.grid;
+export function nearbyBlockers(map,x,y,radius=80) { return queryGrid(map.blockers,map.grid,x,y,radius); }
+export function nearbySolids(map,x,y,radius=80) { return queryGrid(map.solids || map.blockers,map.solidGrid || map.grid,x,y,radius); }
+function queryGrid(rects,g,x,y,radius) {
   const c0 = Math.max(0, Math.floor((x - radius) / g.cellSize));
   const c1 = Math.min(g.cols - 1, Math.floor((x + radius) / g.cellSize));
   const r0 = Math.max(0, Math.floor((y - radius) / g.cellSize));
@@ -386,7 +410,7 @@ export function nearbyBlockers(map, x, y, radius = 80) {
       const arr = g.map.get(c + ':' + rr);
       if (!arr) continue;
       for (const idx of arr) {
-        if (!seen.has(idx)) { seen.add(idx); out.push(map.blockers[idx]); }
+        if (!seen.has(idx)) { seen.add(idx); out.push(rects[idx]); }
       }
     }
   }

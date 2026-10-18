@@ -5,9 +5,9 @@ export const TICK = 1 / TICK_HZ;
 export const SNAPSHOT_HZ = 20;
 
 // --- Pemain (on foot) ---
-export const PLAYER_RADIUS = 15;
-export const WALK_SPEED = 170;
-export const SPRINT_SPEED = 275;
+export const PLAYER_RADIUS = 4.2;
+export const WALK_SPEED = 30;
+export const SPRINT_SPEED = 62;
 export const PLAYER_MAX_HEALTH = 100;
 export const RESPAWN_TIME = 3.0;
 
@@ -20,7 +20,7 @@ export const CAR_TYPES = {
   truck:  { label: 'Truck',   maxSpeed: 330, accel: 250, brake: 560, turn: 1.8, len: 60, wid: 28, mass: 1.6, color: '#2980b9' },
   police: { label: 'Polisi',  maxSpeed: 520, accel: 430, brake: 760, turn: 2.7, len: 48, wid: 25, mass: 1.1, color: '#2c3e50' },
   taxi:   { label: 'Taksi',   maxSpeed: 400, accel: 330, brake: 680, turn: 2.5, len: 48, wid: 24, mass: 1.0, color: '#e67e22' },
-  motorbike: { label: 'Motor', maxSpeed: 620, accel: 540, brake: 700, turn: 3.5, len: 36, wid: 12, mass: 0.6, color: '#e74c3c' },
+  motorbike: { label: 'Motor', maxSpeed: 620, accel: 540, brake: 700, turn: 3.5, len: 28, wid: 12, mass: 0.6, color: '#e74c3c' },
   tractor:   { label: 'Traktor', maxSpeed: 250, accel: 190, brake: 460, turn: 1.5, len: 54, wid: 27, mass: 1.9, color: '#8bc34a' },
   ambulance:{ label: 'Ambulans', maxSpeed: 480, accel: 400, brake: 740, turn: 2.6, len: 62, wid: 26, mass: 1.3, color: '#ecf0f1' },
   firetruck:{ label: 'Pemadam', maxSpeed: 300, accel: 220, brake: 520, turn: 1.6, len: 68, wid: 29, mass: 2.1, color: '#c0392b' },
@@ -60,6 +60,7 @@ export const MSG = {
   HORN: 'horn',
   RESPAWN: 'respawn',
   PING: 'ping',
+  APPEARANCE: 'look',
   // server -> client
   WELCOME: 'welcome',
   SNAPSHOT: 's',

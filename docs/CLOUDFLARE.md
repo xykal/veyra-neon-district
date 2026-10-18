@@ -7,7 +7,7 @@ Veyra now has **two real server adapters** using the same authoritative gameplay
 | `npm start` / Docker | One Node process | Atomic `DATA_DIR/profiles.json` |
 | Cloudflare Worker | One SQLite-backed `City` Durable Object | Private Durable Object SQLite |
 
-The 3D and Lite clients are unchanged: both use same-origin WebSocket `/`, `/shared/` modules and the same game protocol. This is not a static-only Pages upload and does not need a separate VPS.
+The same 3D and Lite protocols work with both adapters: both use same-origin WebSocket `/`, `/shared/` modules and the same game protocol. This is not a static-only Pages upload and does not need a separate VPS.
 
 ## Design
 
@@ -16,7 +16,7 @@ Browser 3D / Lite
   ├── HTTPS files → Workers Static Assets (public/ + shared/ only)
   └── WSS /       → Worker → CITY.getByName('neon-district-v1')
                               ├── shared authoritative Game + WorldRoom
-                              ├── 30 Hz simulation, 20 Hz snapshots
+                              ├── 30 Hz scheduler / 60 Hz physics, ~20 Hz snapshots
                               └── private SQLite profiles + leaderboard
 ```
 
@@ -53,7 +53,7 @@ npm test                    # Node/game/JSON + real SQLite model tests
 npm run build:cloudflare    # public asset staging + Worker dry-run bundle
 npm run test:cloudflare     # real local workerd, SQLite, WebSockets, restart
 npx playwright install --with-deps chromium
-npm run test:e2e:cloudflare # same seven desktop/mobile/WebRTC cases on Workers
+npm run test:e2e:cloudflare # same ten desktop/mobile/WebRTC cases on Workers
 ```
 
 `test:cloudflare` starts and shuts down its own local runtime, uses a temporary database, and verifies persistence across an actual workerd restart. It does not require an account or contact a deployed game server.
@@ -118,3 +118,10 @@ The simulation starts when a socket connects and stops when the last one leaves.
 Workers forwards WebRTC signalling only; microphone audio remains peer-to-peer. The default STUN setup, HTTPS permission requirement, optional TURN relay and max-eight-mic limitations are unchanged. See [HOSTING.md](HOSTING.md#voice--turn). Hosting on Cloudflare does not by itself supply a TURN relay.
 
 The same mobile portrait/landscape/held-fire/joystick/GPS and WebRTC browser suite is run on both Node and Workers. Headless emulation is not an iPhone/Safari/physical-Android certification or a universal FPS guarantee.
+
+
+## Updating from 0.2 to 0.3
+
+The `City` class, object name and namespace migration are unchanged. An additive SQL `appearance` column is created only if absent; rows/wallets/hashed identities are not deleted or re-keyed. Normal updates still reconnect sockets and retain progression. Tests cover a pre-0.3 table and a real workerd restart with a changed look.
+
+Static Assets also contain a release-namespaced copy under `/r/0.3.0/`; the root HTML points to it. Relative ESM imports preserve that namespace. Users should refresh after deployment to receive the new controller, mesh and UI together. The Worker bundle is not a public asset.

@@ -2,7 +2,8 @@
 import * as THREE from './vendor/three.module.js';
 import { ColorPool, ShapePool } from './world3d.js';
 import { CharacterManager, SKIN_TONES, SHIRT_COLORS, PANTS_COLORS, HAIR_COLORS, SHOE_COLORS } from './char3d.js';
-import { CAR_TYPES } from '/shared/constants.js';
+import { CAR_TYPES } from '../shared/constants.js';
+import { avatarPalette } from '../shared/avatar.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const RENDER_DIST = 520; // mobil di luar ini nggak dirender (hemat draw call)
@@ -96,82 +97,37 @@ export class Entities {
 
   /** Muat model mobil Kenney (CC0). Kalau gagal, fallback ke box prosedural. */
   async loadModels(onProgress) {
-    try {
-      const { GLTFLoader } = await import('./vendor/GLTFLoader.js');
-      const loader = new GLTFLoader();
-      const kinds = Object.keys(MODEL_MAP);
-      let done = 0;
-      for (const kind of kinds) {
-        const def = MODEL_MAP[kind];
-        const gltf = await loader.loadAsync(`/assets/cars/${def.file}`);
-        // holder: yaw buat client, di dalamnya model (bisa diputar sendiri)
-        const root = new THREE.Group();
-        const model = gltf.scene;
-        model.rotation.y = def.rot || 0;
-        // skala supaya panjang mobil = fisika 2D (dalam unit dunia)
-        const target = (CAR_TYPES[kind] || CAR_TYPES.sedan).len;
-        const scale = target / def.len;
-        model.scale.setScalar(scale);
-        root.add(model);
-        root.traverse((o) => {
-          if (o.isMesh) {
-            o.castShadow = true;
-            o.receiveShadow = true;
+    const {GLTFLoader}=await import('./vendor/GLTFLoader.js');
+    const loader=new GLTFLoader(),kinds=Object.keys(MODEL_MAP);let done=0;
+    await Promise.all(kinds.map(async kind=>{
+      try {
+        const def=MODEL_MAP[kind],T=CAR_TYPES[kind],gltf=await loader.loadAsync(`/assets/cars/${def.file}`);
+        const root=new THREE.Group(),fit=new THREE.Group(),model=gltf.scene;
+        model.rotation.y=def.rot||0;fit.add(model);root.add(fit);root.updateMatrixWorld(true);
+        const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+        model.position.x-=center.x;model.position.z-=center.z;model.position.y-=box.min.y;
+        const scale=T.len/Math.max(.01,size.x);
+        fit.scale.set(scale,scale,T.wid/Math.max(.01,size.z));root.updateMatrixWorld(true);
+        const wheelInfo=[],lamps={};let wheelRadius=0;
+        root.traverse(o=>{
+          if(/^wheel-/.test(o.name)){wheelInfo.push({name:o.name,steers:/front/.test(o.name)});const wb=new THREE.Box3().setFromObject(o);wheelRadius=Math.max(wheelRadius,(wb.max.y-wb.min.y)/2);}
+          if(!o.isMesh)return;o.castShadow=o.receiveShadow=true;
+          const materials=Array.isArray(o.material)?o.material:[o.material];
+          for(const material of materials){
+            if(material.name==='paint'&&PAINT[kind]!==undefined)material.color.setHex(PAINT[kind]);
+            if(/window|glass/.test(material.name)){material.transparent=true;material.opacity=.42;material.depthWrite=false;}
+            if(['head','tail','lens-left','lens-right'].includes(material.name))lamps[{'lens-left':'lensL','lens-right':'lensR'}[material.name]||material.name]=material;
           }
         });
-        const wheelNames = [];
-        const lamps = { head: null, tail: null, lensL: null, lensR: null };
-        root.traverse((o) => {
-          if (/^wheel-/.test(o.name)) wheelNames.push(o.name);
-          if (o.isMesh && o.material && o.material.name) {
-            const mn = o.material.name;
-            if (mn === 'head') lamps.head = o.material;
-            else if (mn === 'tail') lamps.tail = o.material;
-            else if (mn === 'lens-left') lamps.lensL = o.material;
-            else if (mn === 'lens-right') lamps.lensR = o.material;
-          }
-        });
-        const wheelInfo = wheelNames.map((n) => ({ name: n, steers: /front/.test(n) }));
-        // model bertekstur (colormap) ga punya material lampu -> bikin lampu sintetis
-        if (!lamps.head || !lamps.tail) {
-          const bb = new THREE.Box3().setFromObject(model);
-          const cy = (bb.min.y + bb.max.y) / 2;
-          const hz = Math.max(0.18, (bb.max.z - bb.min.z) * 0.18);
-          const hy = Math.max(0.12, (bb.max.y - bb.min.y) * 0.12);
-          const mkLamp = (x, z, color, emis) => {
-            const m = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: emis, emissiveIntensity: 0.2 });
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, hy, hz), m);
-            mesh.position.set(x, cy, z);
-            root.add(mesh);
-            return m;
-          };
-          if (!lamps.head) {
-            const x = bb.max.x - 0.05;
-            lamps.head = mkLamp(x, (bb.max.z - bb.min.z) * 0.34, 0xffe9a8, 0xffe9a8);
-            lamps.head2 = mkLamp(x, -(bb.max.z - bb.min.z) * 0.34, 0xffe9a8, 0xffe9a8);
-          }
-          if (!lamps.tail) {
-            const x = bb.min.x + 0.05;
-            lamps.tail = mkLamp(x, (bb.max.z - bb.min.z) * 0.34, 0xff2a1a, 0xff2a1a);
-            lamps.tail2 = mkLamp(x, -(bb.max.z - bb.min.z) * 0.34, 0xff2a1a, 0xff2a1a);
-          }
-        }
-        // warna cat
-        root.traverse((o) => {
-          if (o.isMesh && o.material && o.material.name === 'paint' && PAINT[kind] !== undefined) {
-            o.material.color.setHex(PAINT[kind]);
-            o.material.needsUpdate = true;
-          }
-        });
-        this.templates[kind] = { root, scale, wheelInfo, lamps, radius: 0.3 * scale, spin: def.spin || 'z' };
-        done++;
-        if (onProgress) onProgress(done, kinds.length);
-      }
-      return true;
-    } catch (err) {
-      console.warn('Gagal load model mobil, pakai model prosedural:', err);
-      return false;
-    }
+        const bounds=new THREE.Box3().setFromObject(root),height=bounds.max.y;
+        const lamp=(x,z,color)=>{const material=new THREE.MeshStandardMaterial({color:0x333333,emissive:color,emissiveIntensity:.3});const mesh=new THREE.Mesh(new THREE.BoxGeometry(.35,1.25,Math.max(1.4,T.wid*.13)),material);mesh.position.set(x,Math.min(height*.55,9),z);root.add(mesh);return material;};
+        if(!lamps.head){lamps.head=lamp(T.len/2-.22,T.wid*.33,0xffe4ad);lamps.head2=lamp(T.len/2-.22,-T.wid*.33,0xffe4ad);}
+        if(!lamps.tail){lamps.tail=lamp(-T.len/2+.22,T.wid*.33,0xff3322);lamps.tail2=lamp(-T.len/2+.22,-T.wid*.33,0xff3322);}
+        this.templates[kind]={root,scale,wheelInfo,lamps,height,radius:wheelRadius||4,spin:def.spin||'z',dimensions:{length:T.len,width:T.wid,height}};
+      }catch(error){console.warn('Model fallback:',kind,error.message);}
+      done++;onProgress?.(done,kinds.length);
+    }));
+    return Object.keys(this.templates).length===kinds.length;
   }
 
   getTemplate(kind) {
@@ -186,7 +142,7 @@ export class Entities {
    * @param {THREE.Vector3} camPos posisi kamera (untuk culling)
    * @param {number} dt
    */
-  update(players, cars, myId, localFacing, camPos, dt, localAim, peds) {
+  update(players, cars, myId, localFacing, camPos, dt, localAim, peds, localAiming=false) {
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const v = new THREE.Vector3();
@@ -219,6 +175,7 @@ export class Entities {
         visible = dx * dx + dz * dz < radius * radius;
       }
 
+      if(c.d===myId)visible=true;
       if (tpl && !visible) {
         if (this.carObjs.has(c.i)) { seen.add(c.i); this.carObjs.get(c.i).group.visible = false; }
         continue;
@@ -232,7 +189,7 @@ export class Entities {
           const byName = new Map();
           obj.traverse((o) => { if (o.name) byName.set(o.name, o); });
           const wheels = tpl.wheelInfo
-            .map((w) => ({ node: byName.get(w.name), steers: w.steers }))
+            .map((w) => ({ node: byName.get(w.name), steers: w.steers, base:byName.get(w.name)?.quaternion.clone(), spin:0 }))
             .filter((w) => w.node);
           obj.userData.wheels = wheels;
           obj.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -246,7 +203,8 @@ export class Entities {
         const obj = rec.obj;
         rec.group.visible = visible;
         rec.group.position.set(c.x, 0, c.y);
-        obj.rotation.y = -c.a;
+        rec.group.rotation.y=-c.a;
+        obj.rotation.y=0;
 
         // ---- suspensi: badan miring (roll) & jongkok/n lifted (pitch) ----
         const st = this.carState.get(c.i) || { a: c.a, s: 0 };
@@ -257,17 +215,17 @@ export class Entities {
         const rollT = clamp(turnRate * 0.05, -0.13, 0.13);
         const pitchT = clamp(accel * 0.0013, -0.085, 0.085);
         const k = Math.min(1, dt * 9);
-        rec.group.rotation.x += (rollT - rec.group.rotation.x) * k;
-        rec.group.rotation.z += (pitchT - rec.group.rotation.z) * k;
+        obj.rotation.x += (rollT - obj.rotation.x) * k;
+        obj.rotation.z += (pitchT - obj.rotation.z) * k;
 
         // putaran roda + setir
-        const steer = Math.max(-0.55, Math.min(0.55, turn * 4));
-        const radiusWorld = Math.max(1, tpl.radius);
-        for (const w of rec.wheels) {
-          // urutan YXZ: roda berputar dulu (sumbu asalnya) baru/setelah belok
-          w.node.rotation.order = 'YXZ';
-          if (w.steers) w.node.rotation.y = steer;
-          w.node.rotation[tpl.spin] -= (c.s * dt) / radiusWorld;
+        const steer=-(c.st??clamp(turnRate,-1,1))*.45;
+        for(const w of rec.wheels){
+          w.spin-=(c.s*dt)/Math.max(1,tpl.radius);
+          w.node.quaternion.copy(w.base);
+          const spin=new THREE.Quaternion().setFromAxisAngle(tpl.spin==='x'?new THREE.Vector3(1,0,0):new THREE.Vector3(0,0,1),w.spin);
+          w.node.quaternion.multiply(spin);
+          if(w.steers)w.node.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(UP,steer));
         }
         // lampu depan nyala buat mobil biasa (malam hari)
         if (tpl.lamps.head) {
@@ -379,19 +337,23 @@ export class Entities {
       }
       this.lastPos.set(p.i, { x: p.x, y: p.y });
 
-      // di dalam kendaraan -> disembunyikan (driver di dalam bodi mobil)
-      if (p.v) { ch.root.visible = false; continue; }
-      ch.root.visible = true;
-
-      const aimAngle = isMe && localAim !== undefined && localAim !== null ? localAim : p.a;
-      ch.update(dt, {
-        x: p.x, y: p.y,
-        facing: isMe && localFacing !== undefined ? localFacing : p.a,
-        aim: true,
-        aimAngle,
-        moveAngle,
-        speed,
-      });
+      ch.root.visible=true;
+      const aim=isMe?localAiming:!!p.am;
+      const aimAngle=isMe&&Number.isFinite(localAim)?localAim:p.a;
+      const measured=Number.isFinite(p.vx)&&Number.isFinite(p.vy)?Math.hypot(p.vx,p.vy):speed;
+      let x=p.x,y=p.y,height=0,seated=false,face=isMe&&localFacing!==undefined?localFacing:p.a;
+      if(p.v){
+        const c=cars.find(c=>c.i===p.v);
+        if(c){
+          const T=CAR_TYPES[c.y2]||CAR_TYPES.sedan;seated=c.y2==='motorbike'?'bike':true;face=c.a;
+          const heavy=['bus','firetruck','garbage','delivery','ambulance','van'].includes(c.y2),forward=T.len*(heavy?.28:.04),side=seated==='bike'?0:-T.wid*.19;
+          x=c.x+Math.cos(c.a)*forward-Math.sin(c.a)*side;y=c.y+Math.sin(c.a)*forward+Math.cos(c.a)*side;
+          const roof=this.templates[c.y2]?.height||18;
+          height=seated==='bike'?0:c.y2==='kart'?-3:['tractor','shovel'].includes(c.y2)?5:heavy?Math.max(0,Math.min(4,roof-18)):Math.min(0,roof-16);
+        }
+      }
+      ch.update(dt,{x,y,height,seated,facing:aim&&!seated?aimAngle:face,aim:aim&&!seated,aimAngle,moveAngle,speed:seated?0:measured});
+      if(isMe)ch.setOpacity(this.localOpacity??1);
     }
     // ---------------- pejalan kaki (NPC) ----------------
     if (peds) {
@@ -402,10 +364,11 @@ export class Entities {
         const ch = this.chars.ensure(key, Entities.pedPalette(n));
         if (n.d) {
           // ketabrak mobil -> jatuh, bikin animasi "tumbang"
+          ch.update(dt,{x:n.x,y:n.y,facing:n.a,speed:0,aim:false});
           ch.root.visible = true;
-          ch.root.position.set(n.x, 0, n.y);
-          ch.root.rotation.set(0, -n.a, -1.35);
-          ch.hips.position.y = 5.2;
+          ch.root.position.set(n.x, 2.3, n.y);
+          ch.root.rotation.set(0, -n.a, -Math.PI/2);
+          ch.hips.position.y = 8.4;
           ch.torso.rotation.z = 0.2;
           ch.legL.hip.rotation.z = 0.5; ch.legR.hip.rotation.z = -0.3;
           ch.armL.shoulder.rotation.z = 0.8; ch.armR.shoulder.rotation.z = -0.9;
@@ -444,6 +407,7 @@ export class Entities {
 
   /** Palet warna karakter dari data pemain (deterministik per id). */
   paletteFor(p) {
+    if(p.o)return avatarPalette(p.o);
     const h = (p.i * 2654435761) >>> 0;
     const shirt = hexToInt(p.c) ?? SHIRT_COLORS[h % SHIRT_COLORS.length];
     return {
@@ -463,6 +427,7 @@ export class Entities {
     const lean = Math.max(-0.3, Math.min(0.3, (c.s || 0) * 0.0005));
     const base = m.compose(pos.clone(), q, s.set(1, 1, 1)).clone();
     base.multiply(new THREE.Matrix4().makeRotationZ(lean));
+    base.multiply(new THREE.Matrix4().makeScale(.6,.6,.6));
 
     // rangka
     const frame = base.clone();
@@ -508,8 +473,8 @@ export class Entities {
 
     // 2 roda
     for (const ax of [1, -1]) {
-      const off = new THREE.Vector3(ax * 14.5, 8, 0).applyQuaternion(q);
-      m.compose(pos.clone().add(off), q, s.set(1, 1, 1));
+      const off = new THREE.Vector3(ax * 8.7, 4.8, 0).applyQuaternion(q);
+      m.compose(pos.clone().add(off), q, s.set(.6, .6, .6));
       this.bikeWheel.push(m);
     }
   }

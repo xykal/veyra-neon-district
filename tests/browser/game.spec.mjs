@@ -26,7 +26,7 @@ test('desktop 3D, 18 classes, GPS typing, quality idempotence and driving >90',a
 });
 
 test('two real clients exchange chat, receive snapshots, resume profile after reload',async({browser})=>{
- const a=await browser.newContext(),b=await browser.newContext();const x=await a.newPage(),y=await b.newPage();const errors=[errorsOn(x),errorsOn(y)];
+ const a=await browser.newContext({viewport:{width:1024,height:640}}),b=await browser.newContext({viewport:{width:1024,height:640}});const x=await a.newPage(),y=await b.newPage();const errors=[errorsOn(x),errorsOn(y)];
  try{
   for(const p of [x,y])await p.addInitScript(()=>localStorage.setItem('veyra.quality','0'));
   await Promise.all([join(x,'Alpha'),join(y,'Beta')]);
@@ -80,7 +80,7 @@ test('WebGL unavailable → usable 2D client with same multiplayer protocol',asy
 });
 
 test('two-peer WebRTC + fake mic RTP; early PTT release never leaves mic transmitting',async({browser})=>{
- const a=await browser.newContext({permissions:['microphone']}),b=await browser.newContext({permissions:['microphone']});const x=await a.newPage(),y=await b.newPage();const errors=[errorsOn(x),errorsOn(y)];
+ const a=await browser.newContext({permissions:['microphone'],viewport:{width:960,height:600}}),b=await browser.newContext({permissions:['microphone'],viewport:{width:960,height:600}});const x=await a.newPage(),y=await b.newPage();const errors=[errorsOn(x),errorsOn(y)];
  try{
   for(const p of [x,y])await p.addInitScript(()=>localStorage.setItem('veyra.quality','0'));
   await x.addInitScript(()=>{const get=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async o=>{await new Promise(r=>setTimeout(r,400));return get(o);};});
@@ -106,5 +106,50 @@ test('mobile Lite fallback: multiplayer, supported controls only, immediate tap 
   expect(await p.evaluate(()=>__touch.enabled)).toBe(true);await expect(p.locator('.tb-gps')).toBeHidden();await expect(p.locator('.tb-voice')).toBeHidden();
   await p.locator('.tb-fire').tap();await expect.poll(()=>sent.filter(m=>m.t==='fire').length).toBeGreaterThan(0);
   expect(errors).toEqual([]);
+ }finally{await context.close();}
+});
+
+test('identity studio: six characters, outfits, saved looks, genuine F enter/exit and live wardrobe',async({page})=>{
+ const errors=errorsOn(page);await page.goto(base);await page.waitForFunction(()=>window.__lobby);
+ await expect(page.locator('.avatar-preset')).toHaveCount(6);
+ await page.locator('[data-model="4"]').click();await page.locator('#avhair').selectOption('4');await page.locator('#avaccessory').selectOption('1');
+ await page.locator('[data-avatar-tab="outfit"]').click();await page.locator('#avtop').selectOption('2');await page.locator('#avbottom').selectOption('1');await page.locator('#avshoes').selectOption('1');
+ await page.locator('[data-field="topColor"][data-value="7"]').click();await page.locator('#save-look').click();await expect(page.locator('#lookstatus')).toContainText('tersimpan');
+ await page.reload();await page.waitForFunction(()=>window.__lobby?.current.model===4&&__lobby.current.top===2);
+ await page.locator('#nickname').fill('StudioNet');await page.locator('#playbtn').click();await page.waitForFunction(()=>__state.mode==='online'&&window.__vehicleCandidate?.allowed);
+ expect(await page.evaluate(()=>__state.players.get(__state.myId).o.slice(0,7))).toEqual([4,2,4,0,2,7,1]);
+ await page.keyboard.press('f');await page.waitForFunction(()=>__state.inCar>0);
+ expect(await page.evaluate(()=>__entities.chars.chars.get(__state.myId).motion)).toMatch(/seated|riding/);
+ await page.keyboard.press('f');await page.waitForFunction(()=>!__state.inCar);
+ const token=await page.evaluate(()=>localStorage.getItem('veyra.resume'));
+ await page.keyboard.press('p');await page.locator('#wardrobebtn').click();await page.locator('[data-model="5"]').click();await page.locator('#playbtn').click();
+ await page.waitForFunction(()=>__state.players.get(__state.myId).o[0]===5);
+ await join(page,'StudioResume');expect(await page.evaluate(()=>localStorage.getItem('veyra.resume'))).toBe(token);expect(await page.evaluate(()=>__state.players.get(__state.myId).o[0])).toBe(5);
+ expect(errors).toEqual([]);
+});
+
+test('third-person correction: W stays behind the avatar, idle gun holstered, wall collision, true model footprints',async({page})=>{
+ const errors=errorsOn(page);await join(page,'Solid',true);await page.waitForFunction(()=>Object.keys(__entities.templates).length===17);
+ await page.evaluate(()=>{const {game,player:p}=__offline,b=game.map.buildings[0];p.x=b.x-4.7;p.y=b.y+b.h/2;p.a=0;p.vx=p.vy=0;p.car=null;p.input={};window.__wallX=b.x;__cam.yaw=0;__cam.pitch=.18;game.sendSnapshot();});
+ const yaw=await page.evaluate(()=>__cam.yaw);await page.mouse.move(40,450);await page.waitForTimeout(100);expect(await page.evaluate(()=>__cam.yaw)).toBe(yaw);
+ await page.keyboard.down('w');await page.waitForTimeout(1250);await page.keyboard.up('w');
+ expect(await page.evaluate(()=>__offline.player.x<=__wallX-4.1)).toBe(true);
+ const geometry=await page.evaluate(async()=>{
+   const T=await import('/r/0.3.0/public/vendor/three.module.js');const ch=__entities.chars.chars.get(__state.myId),front=new T.Vector3(1,0,0).transformDirection(ch.root.matrixWorld),toward=new T.Vector3(__camera.position.x-ch.root.position.x,0,__camera.position.z-ch.root.position.z).normalize();
+   const errors=[];for(const[k,t]of Object.entries(__entities.templates)){t.root.updateMatrixWorld(true);const b=new T.Box3().setFromObject(t.root),size=b.getSize(new T.Vector3());if(Math.abs(size.x-t.dimensions.length)>.2||Math.abs(size.z-t.dimensions.width)>.2)errors.push(k);}
+   return{dot:front.dot(toward),gun:ch.gun.visible,skinned:ch.mesh.isSkinnedMesh,dimensions:errors};
+ });
+ expect(geometry.dot).toBeLessThan(-.5);expect(geometry.gun).toBe(false);expect(geometry.skinned).toBe(true);expect(geometry.dimensions).toEqual([]);expect(errors).toEqual([]);
+});
+
+test('mobile studio and actual NAIK/TURUN work without teleporting or a keyboard',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await context.newPage(),errors=errorsOn(p);
+ try{
+  await p.addInitScript(()=>localStorage.setItem('veyra.quality','0'));await p.goto(base);await p.waitForFunction(()=>window.__lobby);
+  await p.locator('[data-model="1"]').tap();await p.locator('[data-avatar-tab="outfit"]').tap();await p.locator('#avtop').selectOption('3');await p.locator('#avbottom').selectOption('3');
+  await p.locator('#nickname').fill('PhoneDriver');await p.locator('#playbtn').tap();await p.waitForFunction(()=>__state.mode==='online'&&window.__vehicleCandidate?.allowed);
+  await expect(p.locator('.tb-action')).toHaveClass(/available/);await p.locator('.tb-action').tap();await p.waitForFunction(()=>__state.inCar>0);await expect(p.locator('.tb-action')).toHaveText('TURUN');
+  await p.locator('.tb-action').tap();await p.waitForFunction(()=>!__state.inCar);await expect(p.locator('.tb-action')).toHaveText('NAIK');
+  expect(await p.evaluate(()=>__state.players.get(__state.myId).o[0])).toBe(1);expect(errors).toEqual([]);
  }finally{await context.close();}
 });

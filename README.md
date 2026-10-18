@@ -8,9 +8,19 @@
 
 Independent browser-based **3D third-person multiplayer city sandbox**, inspired by the freedom of classic multiplayer city games. Built with locally vendored Three.js and a shared authoritative backend for **Node/Docker or Cloudflare Workers + Durable Objects**. Desktop keyboard/mouse and mobile touch controls. No GTA / Rockstar / SA-MP game assets.
 
-> **Alpha 0.2.0**, not a finished MMO. Real 3D rendering with a planar authoritative simulation; no jumping, interiors, vertical vehicle physics or account-login system yet. Performance depends on GPU, browser, heat and network—not a promise of 60 FPS on every device.
+> **Alpha 0.3.0**, not a finished MMO. Real 3D rendering with a planar authoritative simulation; no jumping, interiors, vertical vehicle physics or account-login system yet. Performance depends on GPU, browser, heat and network—not a promise of 60 FPS on every device.
 
 ![Veyra gameplay](docs/veyra-play.png)
+
+## 0.3 — controller, collision and Identity Studio
+
+See [the 0.3 change notes](docs/STUDIO-0.3.md) for controls, cosmetic persistence, physics changes and limits.
+
+- **Identity Studio:** six original GPU-skinned body presets, 8 hairstyles, 5 tops, 4 bottoms, 4 footwear styles, skin/hair/clothes palettes and accessories. Three device-local saved looks; the active appearance is validated, replicated and saved with server progression. Open **K** / Settings → Studio while on foot to change it without resetting money.
+- A stable third-person orbit camera, movement-facing avatar, holstered idle weapon and explicit RMB aim. Moving the unlocked cursor no longer spins the camera. Initial canvas click captures camera control rather than shooting backwards.
+- **60 Hz fixed simulation**, shared acceleration/braking and bounded local prediction/reconciliation. Full-length oriented vehicle bodies, swept movement, player/vehicle/prop collisions, safe door exits and consistent model/collider dimensions.
+- **F / NAIK** now uses the same eligible-vehicle selection on client/server, excludes moving/occupied traffic before ranking, checks walls and shows a reason when an interaction is blocked. Spawns offer a reachable parked vehicle.
+- Versioned browser module URLs prevent a normal refresh from combining cached 0.2 controllers with 0.3 meshes/physics.
 
 ## Main features
 
@@ -56,7 +66,9 @@ PORT=3000 DATA_DIR=./data MAX_PLAYERS=32 npm start
 | Shift | Sprint |
 | F | Enter / exit nearby stopped vehicle |
 | Space | Handbrake |
-| Mouse; click | Look / lock pointer; fire (hold to repeat) |
+| Mouse / drag; click | Orbit camera / capture pointer; subsequent LMB fires (hold to repeat) |
+| RMB | Aim; release to holster after firing finishes |
+| K | Character / outfit studio while on foot |
 | T; Enter | Open / send chat |
 | Tab | Online players |
 | G | GPS / destination search |
@@ -101,8 +113,8 @@ docker compose up -d --build
 
 Every push to `main`, tag `v*`, PR, or manual run triggers:
 
-1. Syntax / secret-pattern hygiene, 30 Node/game/SQLite unit+integration tests on Node 22 **and** 24.
-2. Seven Chromium browser tests **on each backend** covering desktop, mobile portrait/landscape, two-client chat/reconnect, 2D fallback and real two-peer WebRTC with fake microphone RTP.
+1. Syntax / secret-pattern hygiene, 48 Node/game/SQLite unit+integration tests on Node 22 **and** 24.
+2. Ten Chromium browser tests **on each backend** covering desktop, mobile portrait/landscape, two-client chat/reconnect, studio/customization, real keyboard/touch car interaction, capsule/camera/body bounds, 2D fallback and real two-peer WebRTC with fake microphone RTP.
 3. Eight integration tests against real local Cloudflare `workerd`, including durable restart, identity handoff, flooding, origin checks and public asset boundaries.
 4. Reproducible runtime packaging into an Actions artifact (`dist/` + `SHA256SUMS`).
 5. **Only after all backend tests pass**, build and push multi-architecture Docker images (`linux/amd64`, `linux/arm64`) to:
@@ -110,7 +122,7 @@ Every push to `main`, tag `v*`, PR, or manual run triggers:
 ```text
 ghcr.io/xykal/veyra-neon-district:latest
 ghcr.io/xykal/veyra-neon-district:sha-<commit>
-ghcr.io/xykal/veyra-neon-district:v0.2.0  # when that release tag is pushed
+ghcr.io/xykal/veyra-neon-district:v0.3.0  # when that release tag is pushed
 ```
 
 Cloudflare deploy runs after those same checks when Actions secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` and variable `CLOUDFLARE_DEPLOY_ENABLED=true` are configured. Only pushes to `main` deploy; pull requests never get hosting credentials. See [the Cloudflare guide](docs/CLOUDFLARE.md).

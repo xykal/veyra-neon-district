@@ -1,8 +1,14 @@
 // VEYRA: NEON DISTRICT - client 3D (Three.js). Server tetap 2D authoritative: (x, y) peta = (x, z) dunia.
 import * as THREE from './vendor/three.module.js';
-import { MSG, CAR_TYPES } from '/shared/constants.js';
-import { buildMap, nearbyBlockers } from '/shared/map.js';
-import { Game } from '/shared/game.js';
+import { MSG, CAR_TYPES } from '../shared/constants.js';
+import { findVehicle } from '../shared/interactions.js';
+import { constrainCamera } from '../shared/camera.js';
+import { sanitizeAppearance,packAppearance } from '../shared/avatar.js';
+import { RELEASE } from '../shared/version.js';
+import { Prediction } from './prediction.js';
+import { Lobby,saveAppearance } from './lobby.js';
+import { buildMap, nearbyBlockers } from '../shared/map.js';
+import { Game } from '../shared/game.js';
 import { Net, profile } from './net.js';
 import { Sfx } from './audio.js';
 import { buildWorld } from './world3d.js';
@@ -38,13 +44,17 @@ const octx = overlay.getContext('2d');
 const minimapCanvas = $('minimap');
 
 window.__state = state;
+window.__vehicleCandidate=null;window.__renderMe=null;
 
 const net = new Net();
 const sfx = new Sfx();
 // efek visual (dibuat setelah scene siap)
 let fxParticles = null, skid = null, flashes = null, rain = null, shake = null, jobMarker = null;
 let gps = null;
-let voice = null;
+let voice = null, lobby = null;
+const prediction=new Prediction();
+let inputSeq=0, cameraSnap=true, aimHeld=false, lookDragging=false, shotUntil=0;
+let vehicleCandidate=null;
 const skidStrips = new Map(); // carId -> {l, r}
 const carPrevAngle = new Map(); // carId -> sudut sebelumnya ( buat deteksi slip )
 let tlPhase = -1;
@@ -53,8 +63,9 @@ let offline = null;
 // ---------------------------------------------------------------- 3D setup
 
 let renderer, scene, camera, world, entities, tracers, minimap;
+let leavingPage=false;
 let worldNodes = [];
-const cam = { yaw: 0, pitch: 0.5, dist: 165, freeLook: 0, shake: 0 };
+const cam = { yaw:0,pitch:.18,dist:70,freeLook:0,shake:0,lastLook:0 };
 
 // ---------------------------------------------------------------- kualitas
 // Tier: 0 = rendah (HP), 1 = sedang, 2 = tinggi. Otomatis turun kalau fps jelek.
@@ -142,7 +153,7 @@ function init3D() {
   window.__fx = { fxParticles, skid, flashes, rain, shake };
 
   entities.loadModels((d, t) => {
-    $('menustatus').textContent = `Memuat model kendaraan 3D... ${d}/${t}`;
+    $('menustatus').textContent = d===t?'Siap · v'+RELEASE+' · pilih look dan masuk distrik.':`Memuat kendaraan 3D… ${d}/${t}`;
   });
   tracers = new Tracers(scene, 24);
   minimap = new Minimap(minimapCanvas, state.map);
@@ -150,6 +161,7 @@ function init3D() {
   gps.setMap(state.map);
   window.__gps = gps;
 
+  lobby=new Lobby(renderer);window.__lobby=lobby;window.__prediction=prediction;
   applyQuality(qualityTier);
 
   // voice chat (push-to-talk, tekan V)
@@ -181,7 +193,9 @@ function init3D() {
   window.__setTouch = (on) => touch?.setEnabled(on);
   window.__setQuality = (t) => applyQuality(t);
 
-  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); addToast('GPU kehilangan konteks. Membuka mode ringan…'); setTimeout(()=>{location.href='/2d/?nogfx=1';},1000); });
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); if(leavingPage)return; addToast('GPU kehilangan konteks. Membuka mode ringan…'); setTimeout(()=>{location.href='/2d/?nogfx=1';},1000); });
+  addEventListener('pagehide',()=>{leavingPage=true;voice?.disable(false);net.close();renderer.dispose();renderer.forceContextLoss();});
+  addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
   addEventListener('resize', onResize);
   onResize();
 }
@@ -227,7 +241,7 @@ let dmx = 0;
 let dmy = 0;
 let mouseHeld = false;
 const isTyping = el => el?.matches?.('input,textarea,select,[contenteditable=true]');
-const modalOpen = () => ['gpspanel','scoreboard','lbpanel','settingspanel'].some(id => !$(id).classList.contains('hidden'));
+const modalOpen = () => state.wardrobeOpen || ['gpspanel','scoreboard','lbpanel','settingspanel'].some(id => !$(id).classList.contains('hidden'));
 
 addEventListener('keydown', (e) => {
   if (e.code === 'Tab') e.preventDefault();
@@ -240,7 +254,7 @@ addEventListener('keydown', (e) => {
   if (k === 't' || k === 'tab') e.preventDefault();
 });
 addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
-addEventListener('blur', () => { keys.clear(); stopVoiceTalk(); mouseHeld = false; });
+addEventListener('blur', () => { aimHeld=false;lookDragging=false;keys.clear(); stopVoiceTalk(); mouseHeld = false; });
 
 canvas.addEventListener('mousemove', (e) => {
   mouseX = e.clientX;
@@ -254,20 +268,27 @@ document.addEventListener('pointerlockchange', () => {
   if (!locked) document.exitPointerLock?.();
 });
 
-canvas.addEventListener('mousedown', (e) => {
-  if (e.button !== 0) return;
-  if (state.mode === 'menu') return;
-  if (!locked && canvas.requestPointerLock) {
-    try { canvas.requestPointerLock(); } catch { /* ignore */ }
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+canvas.addEventListener('mousedown', e=>{
+  if(state.mode==='menu'||state.wardrobeOpen||modalOpen())return;
+  if(e.button===2){aimHeld=true;lookDragging=true;return;}
+  if(e.button!==0)return;
+  if(!locked){
+    lookDragging=true;
+    if(canvas.requestPointerLock)try{const result=canvas.requestPointerLock();result?.catch?.(()=>{});}catch{/* drag-to-look fallback */}
+    return; // first click captures the camera, never fires backwards accidentally
   }
-  mouseHeld = true; fire();
+  mouseHeld=true;fire();
 });
-addEventListener('mouseup', () => { mouseHeld = false; });
+addEventListener('mouseup',e=>{if(e.button===2)aimHeld=false;if(e.button===0)mouseHeld=false;lookDragging=false;});
+canvas.addEventListener('wheel',e=>{e.preventDefault();window.__camZoom=clamp((window.__camZoom||1)+Math.sign(e.deltaY)*.08,.7,1.5);},{passive:false});
 
 function onKeyPress(k) {
   if (state.mode === 'menu') return;
   if (k === 't') { openChat(); return; }
-  if (k === 'f') { send({ t: state.inCar ? MSG.EXIT : MSG.ENTER }); return; }
+  if(state.wardrobeOpen){if(k==='escape')closeWardrobe(false);return;}
+  if (k === 'f') { interactVehicle(); return; }
+  if (k === 'k') { openWardrobe(); return; }
   if (k === 'h') { send({ t: MSG.HORN }); return; }
   if (k === 'r') { send({ t: MSG.RESPAWN }); return; }
   if (k === 'g') { document.exitPointerLock?.(); keys.clear(); gps?.toggle(); return; }
@@ -291,6 +312,29 @@ function updateVoiceHud() {
   el.textContent = names.length ? 'VOX · ' + names.join(', ') : 'VOX siap · tahan V / VOX';
 }
 
+function interactVehicle(){
+  if(modalOpen()||state.mode==='menu')return;
+  send(state.inCar?{t:MSG.EXIT}:{t:MSG.ENTER,c:vehicleCandidate?.allowed?vehicleCandidate.id:undefined});
+}
+function openWardrobe(){
+  const me=state.players.get(state.myId);if(!me||state.inCar||me.d){addToast('Turun dari kendaraan dulu untuk membuka studio.');return;}
+  document.exitPointerLock?.();keys.clear();touch?.reset();aimHeld=mouseHeld=false;
+  send({t:MSG.INPUT,q:++inputSeq,i:{mx:0,my:0,throttle:0,steer:0}});
+  for(const id of ['settingspanel','gpspanel','scoreboard','lbpanel'])$(id).classList.add('hidden');
+  document.body.classList.remove('settings-open');document.body.classList.add('wardrobe-open','menu-mode');
+  state.wardrobeOpen=true;lobby.begin(me.o);$('menu').classList.remove('gone');$('cancelwardrobe').hidden=false;
+  playbtn.disabled=false;$('mobile-join').disabled=false;$('mobile-join').textContent='SIMPAN LOOK →';playbtn.textContent='SIMPAN PENAMPILAN →';
+}
+function closeWardrobe(save){
+  if(!state.wardrobeOpen)return;
+  if(save)send({t:MSG.APPEARANCE,o:packAppearance(lobby.current)});
+  lobby.finish(save);state.wardrobeOpen=false;$('menu').classList.add('gone');$('cancelwardrobe').hidden=true;
+  document.body.classList.remove('wardrobe-open','menu-mode');prediction.reset();cameraSnap=true;
+  playbtn.textContent='MASUK DISTRIK →';$('mobile-join').textContent='MASUK DISTRIK →';
+}
+$('wardrobebtn').addEventListener('click',openWardrobe);
+$('cancelwardrobe').addEventListener('click',()=>closeWardrobe(false));
+$('vehicleprompt').addEventListener('click',interactVehicle);
 function openSettings() {
   document.exitPointerLock?.(); keys.clear(); touch?.reset();
   $('settingspanel').classList.toggle('hidden');
@@ -388,14 +432,17 @@ function addToast(text) {
 
 // ---------------------------------------------------------------- network
 
-net.onOpen = () => { net.send({ t: MSG.HELLO, n: state.name, r:profile.load() }); };
-net.onClose = ev => { voice?.disable(false); if (state.mode === 'online') addToast(ev?.code === 4001 ? 'Progres ini dibuka di tab lain. Reload untuk bermain di sini.' : 'Koneksi putus, menyambung ulang…'); };
+const hello=name=>({t:MSG.HELLO,n:name,r:profile.load(),o:packAppearance(lobby.current),v:RELEASE});
+net.onOpen = () => { net.send(hello(state.name)); };
+net.onClose = ev => { if(state.mode==='online')$('mode').textContent='MENYAMBUNG ULANG';voice?.disable(false); if (state.mode === 'online') addToast(ev?.code === 4001 ? 'Progres ini dibuka di tab lain. Reload untuk bermain di sini.' : 'Koneksi putus, menyambung ulang…'); };
 net.onMessage = (msg) => handlePayload(msg);
 
 function handlePayload(msg) {
   switch (msg.t) {
     case MSG.WELCOME: {
-      clearTimeout(connectTimer); profile.save(msg.r);
+      clearTimeout(connectTimer); profile.save(msg.r);saveAppearance(msg.o);
+      inputSeq=0;prediction.reset();cameraSnap=true;state.cur=state.prev=null;
+      playbtn.disabled=false;$('mobile-join').disabled=false;$('mobile-join').textContent='MASUK DISTRIK →';playbtn.textContent='MASUK DISTRIK →';
       voice?.setContext(msg.id, msg.voice);
       document.body.classList.remove('menu-mode', 'settings-open');
       state.myId = msg.id;
@@ -448,6 +495,7 @@ function applySnapshot(snap) {
     state.inCar = me.v || 0;
     const car = state.cars.get(state.inCar);
     state.speed = car ? car.s : 0;
+    if(state.mode==='online')prediction.reconcile(me,car,state.map,[...state.cars.values()]);
   }
 }
 
@@ -457,8 +505,8 @@ function onSfx(msg) {
   switch (msg.k) {
     case 'shot': {
       sfx.shot();
-      const from = new THREE.Vector3(msg.x, 16, msg.y);
-      const to = new THREE.Vector3(msg.x + Math.cos(msg.a) * 600, 16, msg.y + Math.sin(msg.a) * 600);
+      const from = new THREE.Vector3(msg.x, 11.8, msg.y);
+      const to = new THREE.Vector3(msg.x + Math.cos(msg.a) * 600, 11.8, msg.y + Math.sin(msg.a) * 600);
       tracers.add(from, to);
       if (flashes && msg.i !== state.myId) {
         flashes.flash(msg.x, 16, msg.y, 0xffd27a, 26, 0.07);
@@ -467,7 +515,7 @@ function onSfx(msg) {
     }
     case 'hit': sfx.hit(); break;
     case 'horn': sfx.horn(); break;
-    case 'door': sfx.door(); break;
+    case 'door': sfx.door();if(msg.i===state.myId){cameraSnap=true;prediction.reset();} break;
     default: break;
   }
 }
@@ -478,7 +526,8 @@ function send(obj) {
 }
 
 function fire() {
-  if (state.mode === 'menu' || state.aimAngle == null || isTyping(document.activeElement) || modalOpen()) return;
+  if (state.mode === 'menu' || state.inCar || state.wardrobeOpen || state.aimAngle == null || isTyping(document.activeElement) || modalOpen()) return;
+  shotUntil=performance.now()+450;
   send({ t: MSG.FIRE, a: state.aimAngle });
   // efek lokal: kilat peluru di ujung senjata
   const ch = entities.chars.chars.get(state.myId);
@@ -504,12 +553,14 @@ function fire() {
 
 const playbtn = $('playbtn');
 playbtn.addEventListener('click', () => {
+  if(state.wardrobeOpen){closeWardrobe(true);return;}
   const name = nickname.value.trim() || 'Warga';
+  try{localStorage.setItem('veyra.nickname',name);}catch{}
   state.name = name;
   sfx.init();
   sfx.resume();
   sfx.ui();
-  playbtn.disabled = true;
+  playbtn.disabled = true;$('mobile-join').disabled=true;
   playbtn.textContent = 'MENGHUBUNGKAN...';
   startSession(name);
 });
@@ -519,11 +570,15 @@ function startSession(name) {
   state.name = name;
   $('pname').textContent = name;
   if (new URLSearchParams(location.search).has('offline')) { startOffline(name); return; }
-  if (net.connected) { net.send({ t: MSG.HELLO, n: name, r:profile.load() }); return; }
-  net.onOpen = () => net.send({ t: MSG.HELLO, n: name, r:profile.load() });
+  if (net.connected) { net.send(hello(name)); return; }
+  net.onOpen = () => net.send(hello(name));
   net.connect();
   clearTimeout(connectTimer);
-  connectTimer = setTimeout(() => { if (state.mode === 'menu') startOffline(name); }, 5000);
+  connectTimer = setTimeout(() => {
+    if(state.mode!=='menu')return;
+    net.close();playbtn.disabled=false;$('mobile-join').disabled=false;playbtn.textContent='COBA HUBUNGKAN LAGI →';
+    $('menustatus').textContent='Server belum merespons. Coba lagi atau pilih Coba offline; mode online tidak diganti diam-diam.';
+  }, 15000);
 }
 
 function startOffline(name) {
@@ -531,6 +586,8 @@ function startOffline(name) {
   document.body.classList.remove('menu-mode', 'settings-open');
   const game = new Game({ seed: 20251018 });
   const player = game.addPlayer(name);
+  player.appearance=sanitizeAppearance(lobby.current);
+  inputSeq=0;prediction.reset();cameraSnap=true;state.cur=state.prev=null;playbtn.disabled=false;$('mobile-join').disabled=false;
   offline = { game, player };
   window.__offline = offline;
   game.io = {
@@ -545,12 +602,18 @@ function startOffline(name) {
   if (state.enableTouchOnJoin) touch?.setEnabled(true);
   $('pname').textContent = name;
   $('mode').textContent = 'DEMO OFFLINE 3D';
-  addChat('Server nggak terjangkau — masuk <b class="who">mode demo offline</b>.', 'sys');
+  addChat('Demo lokal aktif — bukan sesi multiplayer online.', 'sys');
 }
 
 $('demobtn').addEventListener('click', () => { sfx.init(); sfx.resume(); startOffline(nickname.value.trim() || 'Warga'); });
 const nickname = $('nickname');
-nickname.value = 'Warga' + Math.floor(Math.random() * 900 + 100);
+try{nickname.value=localStorage.getItem('veyra.nickname')||'Warga'+Math.floor(Math.random()*900+100);}catch{nickname.value='Warga';}
+$('mobile-nickname').value=nickname.value;
+nickname.addEventListener('input',()=>{$('mobile-nickname').value=nickname.value;});
+$('mobile-nickname').addEventListener('input',e=>{nickname.value=e.target.value;});
+$('mobile-join').addEventListener('click',()=>playbtn.click());
+const mainJoinObserver=new IntersectionObserver(entries=>$('mobile-lobby-bar').classList.toggle('inactive',entries[0].isIntersecting),{threshold:.8});mainJoinObserver.observe(playbtn);
+
 
 // ---------------------------------------------------------------- loop
 
@@ -567,7 +630,7 @@ const proj = new THREE.Vector3();
  * Sumbu: fwd = maju/mundur, strafe = kiri/kanan.
  */
 function readInput() {
-  if (isTyping(document.activeElement) || modalOpen()) return { fwd:0, strafe:0, sprint:false, handbrake:false };
+  if ((state.mode==='online'&&!net.connected) || isTyping(document.activeElement) || modalOpen()) return { fwd:0, strafe:0, sprint:false, handbrake:false };
   let fwd = 0, strafe = 0;
   const t = touch?.enabled ? touch.read() : null;
   if (t) { fwd = -t.y; strafe = t.x; }
@@ -583,192 +646,72 @@ function readInput() {
 }
 
 function frame(now) {
-  const realDt = Math.max(.001, (now - last) / 1000);
-  const dt = Math.min(.05, realDt);
-  last = now;
-
-  // ---- input (keyboard + sentuh digabung) ----
-  const inp = readInput();
-  const up = inp.fwd > 0, down = inp.fwd < 0;
-  const left = inp.strafe < 0, right = inp.strafe > 0;
-  const sprint = inp.sprint;
-
-  const me = state.players.get(state.myId);
-  const car = state.inCar ? state.cars.get(state.inCar) : null;
-
-  // ---- kamera: look ----
-  if (touch?.enabled) {
-    const tl = touch.consumeLook();
-    cam.yaw += tl.dx * 0.0042;
-    cam.freeLook = clamp(cam.freeLook + tl.dx * .0042, -1.6, 1.6);
-    cam.pitch = clamp(cam.pitch + tl.dy * 0.0032, 0.12, 0.95);
-  } else if (locked) {
-    cam.yaw -= dmx * 0.0022;
-    cam.pitch = clamp(cam.pitch + dmy * 0.0016, 0.12, 0.95);
-    cam.freeLook = clamp(cam.freeLook - dmx * 0.0022, -1.6, 1.6);
-  } else if (!car) {
-    // jalan kaki: arah kamera ngikutin posisi mouse (360°)
-    cam.yaw = (mouseX / innerWidth - 0.5) * Math.PI * 2;
-    cam.pitch = clamp(0.62 - (mouseY / innerHeight - 0.5) * 1.1, 0.15, 1.0);
-    cam.freeLook = 0;
+  const realDt=Math.max(.001,(now-last)/1000),dt=Math.min(.05,realDt);last=now;
+  if(state.mode==='menu'||state.wardrobeOpen){
+    dmx=dmy=0;
+    if(state.wardrobeOpen){pingTimer+=dt;if(pingTimer>1){pingTimer=0;send({t:MSG.INPUT,q:++inputSeq,i:{mx:0,my:0,throttle:0}});}}
+    lobby.render(dt);octx.clearRect(0,0,innerWidth,innerHeight);requestAnimationFrame(frame);return;
   }
-  dmx = 0; dmy = 0;
-
-  if (car) {
-    // di dalam mobil: kamera ngikutin mobil (bisa look-around kalau mouse terkunci)
-    const targetYaw = car.a + ((locked || touch?.enabled) ? cam.freeLook : 0);
-    let diff = ((targetYaw - cam.yaw + Math.PI) % (Math.PI * 2)) - Math.PI;
-    if (diff < -Math.PI) diff += Math.PI * 2;
-    cam.yaw += diff * Math.min(1, 7 * dt);
-    state.aimAngle = car.a;
-  } else {
-    state.aimAngle = cam.yaw;
-  }
-
-  // ---- kirim input ke server ----
-  inputAcc += dt;
-  if (inputAcc >= 1 / 30 && state.mode !== 'menu') {
-    inputAcc = 0;
-    if (state.inCar) {
-      send({ t: MSG.INPUT, i: { throttle: inp.fwd, steer: inp.strafe, handbrake: inp.handbrake } });
-    } else {
-      const f = inp.fwd;
-      const r = inp.strafe;
-      const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
-      send({
-        t: MSG.INPUT,
-        i: {
-          mx: f * cy + r * -sy,
-          my: f * sy + r * cy,
-          sprint,
-        },
-      });
+  const inp=readInput(),rawMe=state.players.get(state.myId),rawCar=state.cars.get(state.inCar);
+  let lookX=0,lookY=0;
+  if(touch?.enabled){const l=touch.consumeLook();lookX=l.dx;lookY=l.dy;}
+  else if(locked||lookDragging||aimHeld){lookX=dmx;lookY=dmy;}
+  if(lookX||lookY){cam.yaw+=lookX*.0038;cam.pitch=clamp(cam.pitch+lookY*.0025,-.04,.75);cam.lastLook=now;}
+  dmx=dmy=0;
+  if(rawCar&&now-cam.lastLook>1200&&Math.abs(rawCar.s)>3)cam.yaw=lerpAngle(cam.yaw,rawCar.a,1-Math.exp(-dt*3.1));
+  state.aimAngle=cam.yaw;
+  const aiming=!state.inCar&&(aimHeld||mouseHeld||touch?.holding.fire||now<shotUntil)&&!modalOpen();
+  document.body.classList.toggle('is-aiming',!!aiming);
+  const cy=Math.cos(cam.yaw),sy=Math.sin(cam.yaw);
+  const input=state.inCar?{throttle:inp.fwd,steer:inp.strafe,handbrake:inp.handbrake}:{mx:inp.fwd*cy-inp.strafe*sy,my:inp.fwd*sy+inp.strafe*cy,sprint:inp.sprint,aim:!!aiming,aimAngle:cam.yaw};
+  inputAcc+=dt;
+  if(inputAcc>=1/30){inputAcc%=1/30;send({t:MSG.INPUT,q:++inputSeq,i:input});}
+  fireAcc+=Math.min(realDt,.4);
+  if(fireAcc>=.28&&(mouseHeld||touch?.holding.fire)){fireAcc=0;fire();}
+  if(offline){offline.player.input=input;offline.player.inputSeq=inputSeq;offline.game.tick(dt);}
+  const {players,cars:carList,peds}=interp();
+  let me=players.find(p=>p.i===state.myId),car=carList.find(c=>c.i===state.inCar);
+  if(state.mode==='online'&&rawMe){
+    prediction.wet=state.weather===2;
+    prediction.actors=[...players.filter(p=>p.i!==state.myId&&!p.v&&!p.d),...peds.filter(p=>!p.d).map(p=>({...p,bodyRadius:3}))];
+    const predicted=prediction.advance(rawMe,rawCar,input,dt,inputSeq,state.map,carList);
+    if(predicted&&me){
+      if(state.inCar&&car){Object.assign(car,{x:predicted.x,y:predicted.y,a:predicted.a,s:predicted.speed,st:predicted.steerAngle});Object.assign(me,{x:car.x,y:car.y,a:car.a,vx:predicted.vx,vy:predicted.vy});state.speed=car.s;}
+      else Object.assign(me,{x:predicted.x,y:predicted.y,a:predicted.a,vx:predicted.vx,vy:predicted.vy});
     }
   }
-
-  // ---- tembak ----
-  fireAcc += Math.min(realDt, .4);
-  if (state.mode !== 'menu' && fireAcc >= .28 && (mouseHeld || touch?.holding.fire)) {
-    fireAcc = 0; fire();
-  }
-
-  // ---- simulasi offline ----
-  if (offline) {
-    const p = offline.player;
-    if (p.car) {
-      p.input.throttle = inp.fwd;
-      p.input.steer = inp.strafe;
-      p.input.handbrake = inp.handbrake;
-    } else {
-      const f = inp.fwd;
-      const r = inp.strafe;
-      const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
-      p.input.mx = f * cy + r * -sy;
-      p.input.my = f * sy + r * cy;
-      p.input.sprint = sprint;
-    }
-    offline.game.tick(dt);
-  }
-
-  // ---- interpolasi snapshot ----
-  const { players, cars: carList, peds } = interp();
-
-  // ---- update dunia ----
-  const localFacing = car ? car.a : cam.yaw;
-  entities.update(players, carList, state.myId, localFacing, camera.position, dt, state.aimAngle, peds);
+  const target={x:car?.x??me?.x??state.map.size/2,y:car?Math.min(14,(entities.templates[car.y2]?.height||20)*.6):10.5,z:car?.y??me?.y??state.map.size/2};
+  const speed=Math.abs(car?.s||0),dist=(car?102+Math.min(20,speed*.045):67)*(window.__camZoom||1)*(aiming?.78:1);
+  const shoulder=aiming?4.5:2.2,horiz=Math.cos(cam.pitch)*dist;
+  const desired={x:target.x-cy*horiz-sy*shoulder,y:target.y+Math.sin(cam.pitch)*dist,z:target.z-sy*horiz+cy*shoulder};
+  const safe=constrainCamera(state.map,target,desired,2);
+  const k=1-Math.exp(-dt*(car?6:11));
+  const proposed=cameraSnap?safe:{x:lerp(camera.position.x,safe.x,k),y:lerp(camera.position.y,safe.y,k),z:lerp(camera.position.z,safe.z,k)};
+  const finalCam=constrainCamera(state.map,target,proposed,2);camera.position.set(finalCam.x,finalCam.y,finalCam.z);cameraSnap=false;
+  camera.lookAt(target.x+cy*(car?Math.min(22,speed*.09+5):4),target.y,target.z+sy*(car?Math.min(22,speed*.09+5):4));
+  entities.localOpacity=Math.hypot(camera.position.x-target.x,camera.position.z-target.z)<14?.25:1;
+  entities.update(players,carList,state.myId,me?.a??cam.yaw,camera.position,dt,cam.yaw,peds,aiming);
   tracers.update(dt);
-
-  // ---- auto turun kualitas kalo fps jelek ----
-  fpsAvg = fpsAvg * 0.92 + (1 / realDt) * 0.08;
-  qualityTimer += Math.min(realDt, .2);
-  if (qualityTimer > 3) {
-    qualityTimer = 0;
-    if (qualityMode === 'auto' && fpsAvg < 28 && qualityTier > 0) applyQuality(qualityTier - 1);
-    else if (qualityMode === 'auto' && fpsAvg > 56 && qualityTier < detectQuality()) applyQuality(qualityTier + 1);
-    else if (qualityMode === 'auto' && qualityTier === 0 && fpsAvg < 24 && !document.hidden && adaptiveScale > .65) {
-      adaptiveScale=Math.max(.65,adaptiveScale-.15);
-      renderer.setPixelRatio(Math.min(devicePixelRatio || 1,1)*adaptiveScale);
-    }
-  }
-
-  // ---- efek: asap ban, jekap ban, debu langkah ----
-  if (QUALITY[qualityTier].fx) { updateCarFx(carList, me, dt, inp.handbrake); updateDamageFx(carList, dt); updateFootFx(players, dt); }
-  if (fxParticles) fxParticles.update(dt);
-  if (skid) skid.update(dt);
-  if (flashes) flashes.update(dt);
-  if (rain) {
-    const wantRain = QUALITY[qualityTier].rain && state.weather === 2;
-    if (rain.points.visible !== wantRain) rain.setActive(wantRain);
-    rain.update(dt, camera.position);
-  }
-
-  const focus = me ? { x: me.x, z: me.y } : { x: state.map.size / 2, z: state.map.size / 2 };
-  // fase lampu lalu lintas (sinkron semua pemain lewat timestamp server)
-  if (world.setTrafficPhase && state.cur) {
-    const ph = Math.floor((state.cur.ts || Date.now()) / 16000) % 2;
-    if (ph !== tlPhase) { tlPhase = ph; world.setTrafficPhase(ph); }
-  }
-  const dayInfo = world.update(dt, focus, camera.position, camBlockedRect, state.weather || 0);
-  entities.daylight = dayInfo.daylight;
-
-  // ---- kamera chase (third person, gaya GTA) ----
-  let tx = focus.x, tz = focus.z;
-  if (car) { tx = car.x; tz = car.y; }
-  else if (me) { tx = me.x; tz = me.y; }
-
-  const dist = (state.inCar ? 205 : 132) * (window.__camZoom || 1);
-  const dirX = Math.cos(cam.yaw);
-  const dirZ = Math.sin(cam.yaw);
-  let elev = (state.inCar ? .30 : .34);
-  if (locked || touch?.enabled) elev += clamp(cam.pitch - 0.5, -0.25, 0.45) * 0.5;
-  else elev += (0.5 - mouseY / innerHeight) * 0.25;
-  const camPos = computeCamera(tx, tz, dirX, dirZ, dist, elev);
-
-  const k = 1 - Math.pow(0.0006, dt);
-  camera.position.x += (camPos.x - camera.position.x) * k;
-  camera.position.y += (camPos.y - camera.position.y) * k;
-  camera.position.z += (camPos.z - camera.position.z) * k;
-  proj.set(tx + dirX * 12, state.inCar ? 12 : 16, tz + dirZ * 12);
-  camera.lookAt(proj);
-
-  // getaran kamera (tabrakan / tembakan)
-  if (shake) {
-    const sh = shake.update(dt);
-    camera.position.x += sh.x;
-    camera.position.y += sh.y;
-  }
-
-  renderer.render(scene, camera);
-
-  // ---- overlay nama & HP ----
-  drawOverlay(players);
-
-  // ---- marker job 3D ----
-  if (jobMarker) {
-    const job = state.job;
-    const show = !!(job && !job.t);
-    jobMarker.visible = show;
-    if (show) {
-      jobMarker.position.set(job.x, 0, job.y);
-      jobMarker.rotation.y += dt * 1.4;
-      const p = 1 + Math.sin(performance.now() / 320) * 0.08;
-      jobMarker.scale.set(p, 1, p);
-    }
-  }
-
-  // ---- minimap + HUD ----
-  if (minimap && state.cur) minimap.draw(players, carList, state.myId, state.job);
-  if (gps) gps.update(dt, me);
-  if (voice) { voice.update(state.players, me); updateVoiceHud(); }
+  fpsAvg=fpsAvg*.92+(1/realDt)*.08;qualityTimer+=Math.min(realDt,.2);
+  if(qualityTimer>3){qualityTimer=0;if(qualityMode==='auto'&&fpsAvg<28&&qualityTier>0)applyQuality(qualityTier-1);else if(qualityMode==='auto'&&qualityTier===0&&fpsAvg<24&&adaptiveScale>.65){adaptiveScale=Math.max(.65,adaptiveScale-.15);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1)*adaptiveScale);}}
+  if(QUALITY[qualityTier].fx){updateCarFx(carList,me,dt,inp.handbrake);updateDamageFx(carList,dt);updateFootFx(players,dt);}
+  fxParticles?.update(dt);skid?.update(dt);flashes?.update(dt);
+  if(rain){const active=QUALITY[qualityTier].rain&&state.weather===2;if(rain.points.visible!==active)rain.setActive(active);rain.update(dt,camera.position);}
+  if(world.setTrafficPhase&&state.cur){const phase=Math.floor((state.cur.ts||Date.now())/16000)%2;if(phase!==tlPhase){tlPhase=phase;world.setTrafficPhase(phase);}}
+  const day=world.update(dt,{x:target.x,z:target.z},camera.position,null,state.weather||0);entities.daylight=day.daylight;
+  const sh=shake?.update(dt);if(sh){camera.position.x+=sh.x*.3;camera.position.y+=sh.y*.3;}
+  renderer.setViewport(0,0,innerWidth,innerHeight);renderer.render(scene,camera);drawOverlay(players);
+  if(jobMarker){const job=state.job;jobMarker.visible=!!(job&&!job.t);if(jobMarker.visible){jobMarker.position.set(job.x,0,job.y);jobMarker.rotation.y+=dt*1.1;}}
+  if(minimap&&state.cur)minimap.draw(players,carList,state.myId,state.job);
+  gps?.update(dt,me);if(voice){voice.update(state.players,me);updateVoiceHud();}
   touch?.setDriving(!!state.inCar);
-  updateHud();
-
-  pingTimer += dt;
-  if (pingTimer > 2) {
-    pingTimer = 0;
-    if (state.mode === 'online') net.send({ t: MSG.PING, ts: Date.now() });
-  }
-
+  vehicleCandidate=me&&!me.d&&!state.inCar?findVehicle(me,carList,state.map):null;
+  const prompt=$('vehicleprompt');prompt.classList.toggle('hidden',!me?.v&&!vehicleCandidate);prompt.classList.toggle('available',!!me?.v||!!vehicleCandidate?.allowed);
+  if(me?.v){$('vehicleprompttext').textContent=speed>45?'Rem dulu untuk turun':'Turun dari kendaraan';$('vehicledistance').textContent='';}
+  else if(vehicleCandidate){$('vehicleprompttext').textContent=vehicleCandidate.reason;$('vehicledistance').textContent=(vehicleCandidate.distance/10).toFixed(1)+' m';}
+  touch?.buttons.action.classList.toggle('available',!!me?.v||!!vehicleCandidate?.allowed);
+  window.__renderMe=me;window.__vehicleCandidate=vehicleCandidate;
+  updateHud();pingTimer+=dt;if(pingTimer>2){pingTimer=0;if(state.mode==='online')net.send({t:MSG.PING,ts:Date.now()});}
   requestAnimationFrame(frame);
 }
 
@@ -844,7 +787,7 @@ function updateFootFx(players, dt) {
     if (p.d || p.v) continue;
     // cukup efek buat pemain yang deket kamera
     const ch = entities.chars.chars.get(p.i);
-    if (!ch || !ch.root.visible) continue;
+    if (!ch || !ch.root.visible || ch.speed<5) continue;
     const near = Math.hypot(p.x - camera.position.x, p.y - camera.position.z);
     if (near > 160) continue;
     // langkah kaki menghasilkan debu kecil
@@ -888,7 +831,7 @@ function interp() {
   const cur = state.cur;
   if (!cur) return { players: [], cars: [], peds: [] };
   const prev = state.prev;
-  const t = performance.now() - 110;
+  const t = performance.now() - 65;
   let alpha = 1;
   if (prev && state.curTime > state.prevTime) {
     alpha = clamp((t - state.prevTime) / (state.curTime - state.prevTime), 0, 1);
@@ -922,8 +865,8 @@ function drawOverlay(players) {
   octx.textAlign = 'center';
   octx.font = '600 13px "Segoe UI", sans-serif';
   for (const p of players) {
-    if (p.d) continue;
-    proj.set(p.x, 30, p.y).project(camera);
+    if (p.d || p.i===state.myId) continue;
+    proj.set(p.x, p.v?28:22, p.y).project(camera);
     if (proj.z > 1) continue;
     const sx = (proj.x * 0.5 + 0.5) * innerWidth;
     const sy = (-proj.y * 0.5 + 0.5) * innerHeight;
@@ -991,7 +934,7 @@ function updateHud() {
     const c = state.cars.get(state.inCar);
     const T = c ? (CAR_TYPES[c.y2] || CAR_TYPES.sedan) : CAR_TYPES.sedan;
     speedo.classList.remove('hidden');
-    $('speedval').textContent = Math.round(Math.abs(state.speed) * 0.32);
+    $('speedval').textContent = Math.round(Math.abs(state.speed) * 0.36);
     $('carname').textContent = T.label.toUpperCase();
   } else {
     speedo.classList.add('hidden');
@@ -1048,61 +991,6 @@ function lerpAngle(a, b, t) {
   let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
   if (d < -Math.PI) d += Math.PI * 2;
   return a + d * t;
-}
-
-/** True kalau garis pandang dari pemain ke kamera nggak ketabrak gedung. */
-function isClear(x0, z0, x1, z1) {
-  const map = state.map;
-  if (!map) return true;
-  const steps = 14;
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps;
-    const x = x0 + (x1 - x0) * t;
-    const z = z0 + (z1 - z0) * t;
-    for (const r of nearbyBlockers(map, x, z, 80)) {
-      if (x > r.x && x < r.x + r.w && z > r.y && z < r.y + r.h) return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Posisi kamera third-person: di belakang pemain, sudut rendah (gaya GTA).
- * Kalau gedung menghalangi, kamera "mundur" mendekat; kalau masih nutup,
- * sudutnya dinaikkan sedikit (max ~57°, tetap keliatan 3D bukan top-down).
- */
-/** Rect gedung yang ngehalangin kamera (dipakai buat wall-fade). */
-let camBlockedRect = null;
-
-function computeCamera(tx, tz, dirX, dirZ, dist, elev) {
-  const map = state.map;
-  camBlockedRect = null;
-  const horiz = dist * Math.cos(elev);
-  const ox = -dirX * horiz;
-  const oz = -dirZ * horiz;
-  const oy = dist * Math.sin(elev);
-
-  let safe = 1;
-  if (map) {
-    const steps = 18;
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const x = tx + ox * t;
-      const z = tz + oz * t;
-      let hit = false;
-      for (const r of nearbyBlockers(map, x, z, 90)) {
-        if (x > r.x && x < r.x + r.w && z > r.y && z < r.y + r.h) { hit = true; camBlockedRect = r; break; }
-      }
-      if (hit) { safe = Math.max(.82, t - 1.2 / steps); break; }
-    }
-  }
-
-
-  return {
-    x: tx + ox * safe,
-    y: oy * safe + 18,
-    z: tz + oz * safe,
-  };
 }
 
 /** Render papan rekor (leaderboard) ke panel. */

@@ -1,6 +1,6 @@
 {
   "name": "veyra-neon-district",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Veyra: Neon District \u2014 3D multiplayer city sandbox for desktop and mobile browsers.",
   "type": "module",

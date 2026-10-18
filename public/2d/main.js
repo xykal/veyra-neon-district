@@ -1,8 +1,8 @@
 // Entry point client: nyambung ke server, kirim input, render, HUD.
 
-import { MSG, CAR_TYPES, WEAPON, RESPAWN_TIME } from '/shared/constants.js';
-import { buildMap } from '/shared/map.js';
-import { Game } from '/shared/game.js';
+import { MSG, CAR_TYPES, WEAPON, RESPAWN_TIME } from '../../shared/constants.js';
+import { buildMap } from '../../shared/map.js';
+import { Game } from '../../shared/game.js';
 import { Renderer } from './render.js';
 import { Input } from '../input.js';
 import { Net, profile } from '../net.js';

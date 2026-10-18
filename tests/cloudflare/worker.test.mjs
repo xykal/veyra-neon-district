@@ -56,7 +56,7 @@ after(async () => { await stop(); if (dir) rmSync(dir,{recursive:true,force:true
 test('Cloudflare HTTP: assets, Lite, health, cache, secret paths, request methods', async () => {
   const health = await (await fetch(url+'/healthz')).json();
   assert.equal(health.runtime, 'cloudflare-durable-objects'); assert.equal(health.simulation,'idle');
-  for (const p of ['/','/2d/','/main.js','/shared/game.js','/assets/cars/bus.glb']) {
+  for (const p of ['/','/2d/','/main.js','/shared/game.js','/assets/cars/bus.glb','/r/0.3.0/public/main.js','/r/0.3.0/public/lobby.js','/r/0.3.0/shared/avatar.js']) {
     const r = await fetch(url+p); assert.equal(r.status,200,p); await r.arrayBuffer();
     assert.equal(r.headers.get('x-content-type-options'),'nosniff');
   }
@@ -123,13 +123,15 @@ test('Cloudflare flood is disconnected, not queued into simulation', async t => 
 
 test('Cloudflare SQL persists a real moving player across workerd restart', async t => {
   const a = await connect(t,'Durable');
+  a.c.send({t:'look',o:[4,2,3,1,2,7,1,2,1,0,1]});
+  await a.c.message(m=>m.t==='s'&&m.p.some(p=>p.i===a.welcome.id&&p.o[0]===4));
   a.c.send({t:'in',i:{mx:.5,my:1}}); await delay(1100);
   await a.c.close();
   const saved = (await (await fetch(url+'/api/leaderboard')).json()).rows.find(r=>r.name==='Durable');
   assert.ok(saved.dist>0); assert.equal(saved.online,false);
   await stop(); await start();
   const b = await connect(t,'DurableAgain',a.welcome.r);
-  assert.equal(b.welcome.r,a.welcome.r);
+  assert.equal(b.welcome.r,a.welcome.r);assert.equal(b.welcome.o[0],4);assert.equal(b.welcome.o[4],2);
   const resumed = (await (await fetch(url+'/api/leaderboard')).json()).rows.find(r=>r.name==='DurableAgain');
   assert.ok(resumed.dist>=saved.dist); assert.equal(resumed.online,true);
   const board = await (await fetch(url+'/api/leaderboard')).json();

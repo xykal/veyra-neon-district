@@ -1,3 +1,4 @@
+import { RELEASE } from '../shared/version.js';
 // Public deployment checks. No admin credentials, profile creation, or database mutation.
 const raw = process.argv[2] || process.env.CLOUDFLARE_PUBLIC_URL;
 if (!raw) throw new Error('Pass the deployed HTTPS base URL.');
@@ -16,7 +17,7 @@ for (let attempt = 0; attempt < 20; attempt++) {
   await new Promise(r => setTimeout(r, 1500));
 }
 if (!healthy) throw new Error('Expected Cloudflare build did not become healthy.');
-for (const route of ['/','/2d/','/main.js','/shared/game.js','/assets/cars/bus.glb','/api/leaderboard']) {
+for (const route of ['/','/2d/','/main.js','/shared/game.js','/assets/cars/bus.glb','/api/leaderboard',`/r/${RELEASE}/public/main.js`,`/r/${RELEASE}/public/lobby.js`,`/r/${RELEASE}/shared/avatar.js`]) {
   const response = await fetch(base+route, { signal:AbortSignal.timeout(15000) });
   if (!response.ok) throw new Error(`${route}: HTTP ${response.status}`);
   await response.arrayBuffer();

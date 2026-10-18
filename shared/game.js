@@ -3,9 +3,12 @@
 import { buildMap, randomRoadPoint, mulberry32, isWater, nearbyBlockers } from './map.js';
 import {
   stepPlayer, stepCar, resolveCarCollisions, segmentHitsRect,
-  clamp, resolveCircleRect,
+  clamp, resolveCircleRect, resolveActors, circleFree, circleCar, resolvePlayerWorld, resolvePlayerCars, resolveCarWorld, carBody, overlapBoxes,
 } from './physics.js';
 import { MSG, CAR_TYPES, CAR_LIST, WEAPON, PLAYER_RADIUS, TICK, SNAPSHOT_HZ, RESPAWN_TIME, PLAYER_MAX_HEALTH, WANTED_MAX, WANTED_DECAY_MS, WANTED_STEP_MS, POLICE_RADIUS, BUST_DISTANCE, BUST_RESPAWN } from './constants.js';
+
+import { findVehicle, vehicleDoors } from './interactions.js';
+import { sanitizeAppearance, packAppearance, DEFAULT_APPEARANCE } from './avatar.js';
 
 const PLAYER_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e91e63', '#ff6f00', '#8bc34a', '#00bcd4'];
 const PED_COLORS = ['#95a5a6', '#7f8c8d', '#d35400', '#c0392b', '#16a085', '#2980b9', '#8e44ad', '#f39c12', '#27ae60', '#e67e22'];
@@ -22,6 +25,7 @@ export class Game {
     this.pendingShots = [];
     this.tickCount = 0;
     this.lastSnapshot = 0;
+    this.physicsAcc = 0; this.snapshotAcc = 0;
     this.io = null;             // set oleh index.js
     this.aiTarget = 22;
 
@@ -112,6 +116,15 @@ export class Game {
       hit: false,
     };
     car.obeysLight = true;   // sebagian mobil nurut lampu merah
+    car.vx=Math.cos(car.a)*car.speed; car.vy=Math.sin(car.a)*car.speed;
+    resolveCarWorld(car,this.map,false);
+    for(let retry=0;retry<40;retry++) {
+      const overlap=[...this.cars.values()].some(other=>overlapBoxes(carBody(car),carBody(other)));
+      if(!overlap)break;
+      const pt=randomRoadPoint(this.map,this.rnd,opts.parked?36:16);
+      car.x=pt.x;car.y=pt.y;car.a=pt.a;car.vx=Math.cos(pt.a)*car.speed;car.vy=Math.sin(pt.a)*car.speed;
+      resolveCarWorld(car,this.map,false);
+    }
     this.cars.set(id, car);
     return car;
   }
@@ -127,10 +140,12 @@ export class Game {
       color: PLAYER_COLORS[(id - 1) % PLAYER_COLORS.length],
       x: spawn.x,
       y: spawn.y,
-      a: 0,
+      a: spawn.a || 0,
       vx: 0,
       vy: 0,
       moving: false,
+      appearance:sanitizeAppearance(DEFAULT_APPEARANCE),
+      inputSeq:0, appliedSeq:0, aimUntil:0,
       health: PLAYER_MAX_HEALTH,
       dead: false,
       respawnAt: 0,
@@ -161,11 +176,10 @@ export class Game {
     const parked = central.length > 6 ? central : all;
     for (let k = 0; k < 80 && parked.length; k++) {
       const car = parked[Math.floor(this.rnd() * parked.length)];
-      const a = this.rnd() * Math.PI * 2;
-      const d = 36 + this.rnd() * 24;
-      const x = car.x + Math.cos(a) * d;
-      const y = car.y + Math.sin(a) * d;
-      if (this.isFreeSpot(x, y)) return { x, y };
+      const doors=vehicleDoors(car);
+      for(const door of doors) {
+        if(circleFree(door.x,door.y,PLAYER_RADIUS+1,this.map,this.cars.values())) return {x:door.x,y:door.y,a:car.a};
+      }
     }
     // 2) fallback: di trotoar blok
     const spawns = this.map.spawns;
@@ -181,11 +195,7 @@ export class Game {
   }
 
   isFreeSpot(x, y) {
-    if (isWater(this.map, x, y)) return false;
-    for (const r of nearbyBlockers(this.map, x, y, 60)) {
-      if (x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h) return false;
-    }
-    return true;
+    return circleFree(x,y,PLAYER_RADIUS+1,this.map,this.cars.values());
   }
 
   removePlayer(id) {
@@ -207,6 +217,10 @@ export class Game {
 
     switch (msg.t) {
       case MSG.INPUT: {
+        if(msg.q!==undefined) {
+          if(!Number.isInteger(msg.q)||msg.q<0||msg.q>2147483647||msg.q<(player.inputSeq||0))return;
+          player.inputSeq=msg.q;
+        }
         const i = player.input;
         const inp = msg.i || {};
         i.mx = Number.isFinite(inp.mx) ? clamp(inp.mx, -1, 1) : 0;
@@ -215,17 +229,27 @@ export class Game {
         i.throttle = Number.isFinite(inp.throttle) ? clamp(inp.throttle, -1, 1) : 0;
         i.steer = Number.isFinite(inp.steer) ? clamp(inp.steer, -1, 1) : 0;
         i.handbrake = !!inp.handbrake;
+        i.aim = !!inp.aim;
+        i.aimAngle = Number.isFinite(inp.aimAngle) ? Math.atan2(Math.sin(inp.aimAngle),Math.cos(inp.aimAngle)) : player.a;
         break;
       }
       case MSG.FIRE: {
+        if(player.dead||player.car)return;
         const now = performance.now() / 1000;
         if (now - player.lastShot < WEAPON.pistol.rate) return;
         player.lastShot = now;
+        player.aimUntil=Date.now()+400; player.aimAngle=Number.isFinite(msg.a)?msg.a:player.a;
         this.pendingShots.push({ id: player.id, a: Number.isFinite(msg.a) ? msg.a : player.a, sx: player.x, sy: player.y });
         break;
       }
-      case MSG.ENTER: this.tryEnterCar(player); break;
+      case MSG.ENTER: this.tryEnterCar(player,Number.isInteger(msg.c)?msg.c:null); break;
       case MSG.EXIT: this.tryExitCar(player); break;
+      case MSG.APPEARANCE: {
+        if(player.car||player.dead){this.sendTo(player,{t:MSG.SYSTEM,m:'Turun dari kendaraan untuk mengganti penampilan.'});break;}
+        if(Date.now()-(player.lastAppearance||0)<400)break;
+        player.lastAppearance=Date.now();player.appearance=sanitizeAppearance(msg.o,player.appearance);
+        break;
+      }
       case MSG.HORN: this.broadcast({ t: MSG.SFX, k: 'horn', i: player.id, x: player.x, y: player.y }); break;
       case MSG.CHAT: {
         const now = performance.now();
@@ -243,52 +267,31 @@ export class Game {
     }
   }
 
-  tryEnterCar(player) {
-    if (player.car || player.dead) return;
-    let best = null;
-    let bestD = 115 * 115;
-    for (const car of this.cars.values()) {
-      if (car.driver) continue;
-      const d = (car.x - player.x) ** 2 + (car.y - player.y) ** 2;
-      if (d < bestD) { bestD = d; best = car; }
-    }
-    if (!best) {
-      this.sendTo(player, { t: MSG.SYSTEM, m: 'Tidak ada kendaraan di dekatmu.' });
-      return;
-    }
-    if (Math.abs(best.speed) > 60) return;
-    best.driver = player.id;
-    best.parked = false;
-    best.ai = false;
-    best.aiState = null;
-    best.speed = 0; best.vx = 0; best.vy = 0;
-    player.car = best.id;
-    player.x = best.x;
-    player.y = best.y;
-    player.a = best.a;
-    this.broadcast({ t: MSG.SFX, k: 'door', x: best.x, y: best.y });
+  tryEnterCar(player, requestedId=null) {
+    if(player.car||player.dead)return false;
+    const match=findVehicle(player,this.cars.values(),this.map,requestedId);
+    if(!match?.allowed){this.sendTo(player,{t:MSG.SYSTEM,m:match?.reason||'Tidak ada kendaraan dekatmu. Dekati sisi pintu.'});return false;}
+    const c=match.car;
+    c.driver=player.id;c.parked=false;c.ai=false;c.aiState=null;c.speed=0;c.vx=c.vy=0;c.yawRate=0;
+    player.car=c.id;player.x=c.x;player.y=c.y;player.a=c.a;player.vx=player.vy=0;player.input={};
+    this.broadcast({t:MSG.SFX,k:'door',x:c.x,y:c.y,i:player.id,c:c.id,action:'enter',side:match.door.side});
+    return true;
   }
-
   tryExitCar(player) {
-    if (!player.car) return;
-    const car = this.cars.get(player.car);
-    if (!car) { player.car = null; return; }
-    // keluar di sisi mobil
-    const off = 26;
-    let bx = car.x + Math.cos(car.a + Math.PI / 2) * off;
-    let by = car.y + Math.sin(car.a + Math.PI / 2) * off;
-    const rects = nearbyBlockers(this.map, bx, by, 80);
-    for (const r of rects) {
-      const res = resolveCircleRect(bx, by, PLAYER_RADIUS, r);
-      if (res) { bx = res.x; by = res.y; }
+    if(!player.car)return false;
+    const c=this.cars.get(player.car);
+    if(!c){player.car=null;return false;}
+    if(Math.abs(c.speed)>45){this.sendTo(player,{t:MSG.SYSTEM,m:'Rem dulu sebelum turun dari kendaraan.'});return false;}
+    const doors=vehicleDoors(c),T=CAR_TYPES[c.type]||CAR_TYPES.sedan;
+    for(const off of [0,7,14])for(const door of doors) {
+      const x=door.x-Math.sin(c.a)*door.side*off,y=door.y+Math.cos(c.a)*door.side*off;
+      if(!circleFree(x,y,PLAYER_RADIUS+.3,this.map,this.cars.values()))continue;
+      c.driver=null;c.speed=0;c.vx=c.vy=0;c.yawRate=0;
+      player.car=null;player.x=x;player.y=y;player.a=c.a;player.vx=player.vy=0;player.input={};
+      this.broadcast({t:MSG.SFX,k:'door',x:c.x,y:c.y,i:player.id,c:c.id,action:'exit',side:door.side});
+      return true;
     }
-    car.driver = null;
-    car.speed = 0; car.vx = 0; car.vy = 0;
-    player.car = null;
-    player.x = bx;
-    player.y = by;
-    player.vx = 0;
-    player.vy = 0;
+    this.sendTo(player,{t:MSG.SYSTEM,m:'Kedua pintu terhalang. Geser kendaraan ke ruang terbuka.'});return false;
   }
 
   tryRespawn(player) {
@@ -584,9 +587,9 @@ export class Game {
       id: this.nextPedId++,
       i, j, dir,
       t: this.rnd() * (this.map.cell - 124),
-      speed: 55 + this.rnd() * 45,
+      speed: 10 + this.rnd() * 7,
       color: PED_COLORS[Math.floor(this.rnd() * PED_COLORS.length)],
-      down: 0,
+      down: 0, bodyRadius:3,
       x: 0, y: 0, a: 0,
     };
     const p = this.pedPos(ped);
@@ -615,6 +618,7 @@ export class Game {
         continue;
       }
       ped.x = p.x; ped.y = p.y;
+      resolvePlayerWorld(ped,this.map,3.5);
     }
 
     // ditabrak mobil? (kena dari belakang = terjatuh)
@@ -701,7 +705,12 @@ export class Game {
   // ---------------------------------------------------------------- tick
 
   tick(dt) {
+    this.physicsAcc+=Math.max(0,Math.min(.1,dt));
+    while(this.physicsAcc>=1/60-1e-8){this.physicsAcc-=1/60;this.stepFixed(1/60);}
+  }
+  stepFixed(dt) {
     this.tickCount++;
+    const allCars=[...this.cars.values()];
 
     // pemain
     const now = Date.now();
@@ -721,11 +730,14 @@ export class Game {
         p.x = car.x;
         p.y = car.y;
         p.a = car.a;
-        p.vx = Math.cos(car.a) * car.speed;
-        p.vy = Math.sin(car.a) * car.speed;
+        p.vx = car.vx;
+        p.vy = car.vy;
       } else {
-        stepPlayer(p, p.input, dt, this.map, this.weather.kind === 2);
+        const input={...p.input};
+        if(p.aimUntil>Date.now()){input.aim=true;input.aimAngle=p.aimAngle;}
+        stepPlayer(p, input, dt, this.map, allCars);
       }
+      p.appliedSeq=p.inputSeq||0;
       // statistik: jarak tempuh + kecepatan puncak
       const d = Math.hypot(p.x - px, p.y - py);
       if (d < 400) p.stats.dist += d;
@@ -736,13 +748,23 @@ export class Game {
     // AI
     for (const car of this.cars.values()) {
       if (car.ai && !car.driver) this.stepAi(car, dt);
+      else if(!car.driver&&!car.parked)stepCar(car,{throttle:0,steer:0,handbrake:false},dt,this.map,this.weather.kind===2);
     }
 
     // tabrakan antar mobil
-    resolveCarCollisions([...this.cars.values()]);
+    resolveCarCollisions(allCars);
+    for(const c of allCars)resolveCarWorld(c,this.map);
+    for(const p of this.players.values()) {
+      if(p.dead)continue;
+      if(p.car){const c=this.cars.get(p.car);if(c){p.x=c.x;p.y=c.y;p.vx=c.vx;p.vy=c.vy;p.a=c.a;}}
+      else resolvePlayerCars(p,allCars,this.map);
+    }
 
     // NPC & pekerjaan
     this.stepPeds(dt);
+    const walkers=[...this.players.values()].filter(p=>!p.dead&&!p.car);
+    resolveActors([...walkers,...[...this.peds.values()].filter(p=>p.down<=0)],this.map);
+    for(const p of walkers)resolvePlayerCars(p,allCars,this.map);
     this.stepJobs();
 
     // cuaca berubah
@@ -772,7 +794,9 @@ export class Game {
     if (policeCount < wantedPolice) this.spawnAiCar('police');
 
     // snapshot
-    if (now - this.lastSnapshot >= 1000 / SNAPSHOT_HZ) {
+    this.snapshotAcc+=dt;
+    if (this.snapshotAcc >= 1 / SNAPSHOT_HZ - 1e-8) {
+      this.snapshotAcc=Math.max(0,this.snapshotAcc-1/SNAPSHOT_HZ);
       this.lastSnapshot = now;
       this.sendSnapshot();
     }
@@ -799,6 +823,9 @@ export class Game {
         r: Math.max(0, p.respawnAt - Date.now()),
         v: p.car || 0,
         $: p.money || 0,
+        o:packAppearance(p.appearance),q:p.appliedSeq||0,
+        vx:Math.round((p.vx||0)*100)/100,vy:Math.round((p.vy||0)*100)/100,
+        am:p.input.aim||p.aimUntil>Date.now()?1:0,
       });
     }
     const cs = [];
@@ -821,6 +848,9 @@ export class Game {
         c: car.color,
         d: car.driver || 0,
         h: car.hp === undefined ? 100 : car.hp,
+        vx:Math.round((car.vx||0)*100)/100,vy:Math.round((car.vy||0)*100)/100,
+        st:Math.round((car.steerAngle||0)*100)/100,
+        q:car.driver?(this.players.get(car.driver)?.appliedSeq||0):0,
       });
     }
     const ns = [];

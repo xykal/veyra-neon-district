@@ -5,3 +5,14 @@
 @media(prefers-reduced-motion:reduce){.tbtn{backdrop-filter:none}}
 /* Author display:flex must not override hidden buttons in the Lite client. */
 .tbtn[hidden]{display:none!important}
+/* The character studio must never hide the mobile join action below two screens of options. */
+.mobile-lobby-bar{display:none}
+@media(max-width:760px){
+ #menu{padding-bottom:100px}
+ .mobile-lobby-bar{display:flex;position:fixed;bottom:0;left:0;right:0;padding:11px 12px calc(11px + env(safe-area-inset-bottom));gap:12px;align-items:center;z-index:90;background:#0b1a2aef;border-top:1px solid #3a575f;backdrop-filter:blur(10px)}
+ .mobile-lobby-bar.inactive{opacity:0;pointer-events:none}
+ .mobile-lobby-bar label{display:block;min-width:0;width:44%;font-size:7px;letter-spacing:1.5px;color:#789cae}
+ .mobile-lobby-bar input{display:block;width:100%;padding:5px 0;border:0;background:none;color:#e8f1e6;font-size:16px;font-weight:600;outline-offset:0}
+ .mobile-lobby-bar button{flex:1;min-height:45px;background:#c7e6b8;color:#163026;border:0;border-radius:7px;padding:10px;font-size:10px;font-weight:800;letter-spacing:.8px}
+ .mobile-lobby-bar button:disabled{opacity:.5}
+}
