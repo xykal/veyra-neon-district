@@ -18,3 +18,12 @@ coverage/
 .wrangler/
 .dev.vars
 .dev.vars.*
+
+# Native Godot generated state; private signing keys never belong in source.
+.godot/
+*.keystore
+*.jks
+*.p12
+native/assets/build-info.json
+__pycache__/
+*.pyc

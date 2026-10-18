@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { RELEASE } from '../shared/version.js';
 const root=fileURLToPath(new URL('../',import.meta.url));
-const ignored=new Set(['.git','node_modules','dist','data','.test-data','test-results','playwright-report','.wrangler']);
+const ignored=new Set(['.git','node_modules','dist','data','.test-data','test-results','playwright-report','.wrangler','.godot']);
 const files=[];
 function walk(dir){for(const e of readdirSync(dir,{withFileTypes:true})){if(ignored.has(e.name))continue;const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else files.push(p);}}
 walk(root);

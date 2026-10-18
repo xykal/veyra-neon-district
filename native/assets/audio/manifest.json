@@ -1,0 +1,109 @@
+{
+  "author": "Veyra contributors",
+  "license": "MIT",
+  "sampleRate": 24000,
+  "files": [
+    {
+      "name": "step_0",
+      "seconds": 0.19,
+      "loop": false,
+      "sha256": "3b05dcc71fdc9978f7ab72165d2f9bba9c92dfcdb4ca656b46e53ff96b38a6ed"
+    },
+    {
+      "name": "step_1",
+      "seconds": 0.19,
+      "loop": false,
+      "sha256": "b693e0160df864de41d78c0823e9df6c20bbf109a0860c9da8d16e63ab701feb"
+    },
+    {
+      "name": "step_2",
+      "seconds": 0.19,
+      "loop": false,
+      "sha256": "d20250e8c1295c09545b17750c05e5f9461ad2aa61d5ac3fe92d0628ebee581e"
+    },
+    {
+      "name": "step_3",
+      "seconds": 0.19,
+      "loop": false,
+      "sha256": "7e28093d476fa3dd7af0deb619200e355f70167a5c05512c8060ab58debd1740"
+    },
+    {
+      "name": "engine_idle",
+      "seconds": 1.0,
+      "loop": true,
+      "sha256": "1457ba404cbb711d12387feccbc2bcc073f56371a2c7d1cfdaced78425987590"
+    },
+    {
+      "name": "engine_mid",
+      "seconds": 1.0,
+      "loop": true,
+      "sha256": "26ee4ba6b1d4f65e1498f8d7f0ad1b956133cc173b64ef8d4959d2ba4a19944b"
+    },
+    {
+      "name": "engine_high",
+      "seconds": 1.0,
+      "loop": true,
+      "sha256": "eee362c703488d0fadb079fd2431c763f24fb6bde426fbbaecf0a2052e9e8830"
+    },
+    {
+      "name": "skid",
+      "seconds": 0.9,
+      "loop": true,
+      "sha256": "b69bdba130be730a9ca14a0ab6537681c8df47f029035088f4e30e7854391dae"
+    },
+    {
+      "name": "shot",
+      "seconds": 0.28,
+      "loop": false,
+      "sha256": "63af0689ce1493d2cbe3e6f524c26eff32fde8b2f17539d66e5b1741af17bcdd"
+    },
+    {
+      "name": "impact",
+      "seconds": 0.46,
+      "loop": false,
+      "sha256": "77a5e5a3b3993678fe5b55db24b5ee3565d6435f2a479caa2159b8327b5a64ca"
+    },
+    {
+      "name": "door",
+      "seconds": 0.22,
+      "loop": false,
+      "sha256": "2b1d9ca6801fd321f3615f7c11ff6ad972779ff7fdaacd81c59e7916643d023b"
+    },
+    {
+      "name": "horn",
+      "seconds": 0.65,
+      "loop": false,
+      "sha256": "e7549b578f01bcd62c645b3d797d91aea2720a28015c53e665142adb0cdd49c4"
+    },
+    {
+      "name": "siren",
+      "seconds": 2.0,
+      "loop": true,
+      "sha256": "43b64fbb99260236237adfcadd2b59d0f80597593a70c1dd7466eb9de357f681"
+    },
+    {
+      "name": "wind",
+      "seconds": 2.0,
+      "loop": true,
+      "sha256": "8e05bf7a04f1e171b40ec85047749a0cd9afeefa6c377bd92a409d8bed6f5d8e"
+    },
+    {
+      "name": "rain",
+      "seconds": 2.0,
+      "loop": true,
+      "sha256": "a2934387c81fd8701c3a5db1a97c4dc996de5d3935b4368d895521d26ef63362"
+    },
+    {
+      "name": "ui",
+      "seconds": 0.16,
+      "loop": false,
+      "sha256": "dad38e28ac2f67ee10059fe077a111506988cd3207eaccdc890f3e6d6c137409"
+    },
+    {
+      "name": "land",
+      "seconds": 0.4,
+      "loop": false,
+      "sha256": "79095d0f51c40df33c4037e5583409afc327f327c7025297b9eff773b57cd021"
+    }
+  ]
+}

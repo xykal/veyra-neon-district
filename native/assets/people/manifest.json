@@ -1,0 +1,63 @@
+{
+  "license": "CC0-1.0 + MIT original modifications",
+  "assets": [
+    {
+      "file": "citizen_male.glb",
+      "bytes": 4334528,
+      "sha256": "f9520b42a40d2e72170df7e3adb8f70b2e68a2db5701f117f3e749e5bb19110f",
+      "animations": [
+        "Crouch_Fwd_Loop",
+        "Crouch_Idle_Loop",
+        "Dance_Loop",
+        "Death01",
+        "Driving_Loop",
+        "Hit_Chest",
+        "Hit_Head",
+        "Idle_Loop",
+        "Interact",
+        "Jog_Fwd_Loop",
+        "Jump_Land",
+        "Jump_Loop",
+        "Jump_Start",
+        "Pistol_Aim_Neutral",
+        "Pistol_Idle_Loop",
+        "Pistol_Reload",
+        "Pistol_Shoot",
+        "Sitting_Idle_Loop",
+        "Sprint_Loop",
+        "Walk_Loop"
+      ],
+      "skeletonBones": 65,
+      "source": "Superhero_Male_FullBody.gltf"
+    },
+    {
+      "file": "citizen_female.glb",
+      "bytes": 4664980,
+      "sha256": "6316df033055c6a8323a7b91dad6ebfcec4b213312c5cad08a54d89aca8bdb8d",
+      "animations": [
+        "Crouch_Fwd_Loop",
+        "Crouch_Idle_Loop",
+        "Dance_Loop",
+        "Death01",
+        "Driving_Loop",
+        "Hit_Chest",
+        "Hit_Head",
+        "Idle_Loop",
+        "Interact",
+        "Jog_Fwd_Loop",
+        "Jump_Land",
+        "Jump_Loop",
+        "Jump_Start",
+        "Pistol_Aim_Neutral",
+        "Pistol_Idle_Loop",
+        "Pistol_Reload",
+        "Pistol_Shoot",
+        "Sitting_Idle_Loop",
+        "Sprint_Loop",
+        "Walk_Loop"
+      ],
+      "skeletonBones": 65,
+      "source": "Superhero_Female_FullBody.gltf"
+    }
+  ]
+}

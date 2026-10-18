@@ -1,0 +1,134 @@
+name: Native · Windows · Android
+on:
+  push:
+    branches: [main]
+    paths: ['native/**', 'tools/native-*', '.github/workflows/native.yml']
+  pull_request:
+    paths: ['native/**', 'tools/native-*', '.github/workflows/native.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-test:
+    name: Godot · Physics · Ragdoll · Multiplayer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install verified native engine
+        run: python tools/native-setup.py --platform linux --github-env "$GITHUB_ENV"
+      - name: Import and test the real engine
+        run: python tools/native-test.py
+  windows:
+    name: Build · Test Windows x64
+    needs: native-test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install verified Windows engine/template
+        run: python tools/native-setup.py --platform windows --templates windows --github-env "$env:GITHUB_ENV"
+      - name: Export standalone Windows game
+        run: python tools/native-build.py --target windows
+      - name: Run the exported EXE on Windows
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist/native/windows/VeyraNative.exe" -ArgumentList "--headless", "--audio-driver", "Dummy", "--fixed-fps", "60", "--quit-after", "420", "--log-file", "$env:RUNNER_TEMP/veyra-native-smoke.log", "--", "--smoke-test" -Wait -PassThru
+          $log = Get-Content "$env:RUNNER_TEMP/veyra-native-smoke.log" -Raw
+          Write-Output $log
+          if ($p.ExitCode -ne 0 -or $log -notmatch "NATIVE_APP_SMOKE_PASS" -or $log -match "SCRIPT ERROR|ERROR:") { throw "Exported native Windows smoke failed" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-windows
+          path: dist/native/*.zip
+          retention-days: 14
+  android:
+    if: github.event_name != 'pull_request'
+    name: Build · Verify Android ARM64 + ARMv7
+    needs: native-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - name: Install Android build tools
+        run: sdkmanager 'platform-tools' 'build-tools;35.0.1' 'platforms;android-35'
+      - name: Install verified native engine/templates
+        run: python tools/native-setup.py --platform linux --templates android --github-env "$GITHUB_ENV"
+      - name: Restore private release signing key
+        env:
+          NATIVE_ANDROID_KEYSTORE_BASE64: ${{ secrets.NATIVE_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          python - <<'PY'
+          import os,base64,pathlib
+          p=pathlib.Path(os.environ['RUNNER_TEMP'])/'veyra-native.keystore'
+          p.write_bytes(base64.b64decode(os.environ['NATIVE_ANDROID_KEYSTORE_BASE64']))
+          p.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'],'a') as f:f.write('GODOT_ANDROID_KEYSTORE_RELEASE_PATH='+str(p)+'\n')
+          PY
+      - name: Export signed native APKs
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: veyra
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.NATIVE_ANDROID_KEYSTORE_PASSWORD }}
+        run: python tools/native-build.py --target android
+      - name: Verify signatures and native libraries
+        run: |
+          for apk in dist/native/*.apk; do
+            "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose --print-certs "$apk"
+            "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$apk" | grep -E 'package:|sdkVersion:|targetSdkVersion:|native-code:'
+          done
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/veyra-native.keystore"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-android
+          path: dist/native/*.apk
+          retention-days: 14
+  publish:
+    name: Publish native alpha downloads
+    needs: [windows, android]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: native-release
+      - name: Generate checksums and publish prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd native-release
+          sha256sum *.zip *.apk > SHA256SUMS.txt
+          tag=native-v0.4.0-alpha.1
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title 'Veyra Native 0.4 — Windows & Android alpha' --notes-file ../native/README.md
+          else
+            existing=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json targetCommitish --jq '.targetCommitish')
+            if [ "$existing" != "$GITHUB_SHA" ]; then
+              echo 'Refusing to overwrite a release from another commit. Bump the native alpha version first.'
+              exit 1
+            fi
+          fi
+          gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber *.zip *.apk SHA256SUMS.txt

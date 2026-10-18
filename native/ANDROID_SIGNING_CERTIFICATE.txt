@@ -1,0 +1,10 @@
+Veyra Native Alpha release APK certificate (public information, not the private key)
+
+Subject: CN=Veyra Native Alpha, O=Veyra contributors
+SHA-256 certificate fingerprint:
+d514e8f9a3a2c259181b5be6906fa00dc66cfb1adf37c717adfd7cb945033916
+
+Package: io.github.xykal.veyra.nativealpha
+The matching private signing key/password are not part of this repository or game assets.
+Verify downloaded APKs with the Android SDK's apksigner and check release SHA256SUMS.txt.
+This is an independently signed sideload alpha, not a Google Play or Windows code-signing certification.

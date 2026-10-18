@@ -22,6 +22,16 @@ See [the 0.3 change notes](docs/STUDIO-0.3.md) for controls, cosmetic persistenc
 - **F / NAIK** now uses the same eligible-vehicle selection on client/server, excludes moving/occupied traffic before ranking, checks walls and shows a reason when an interaction is blocked. Spawns offer a reachable parked vehicle.
 - Versioned browser module URLs prevent a normal refresh from combining cached 0.2 controllers with 0.3 meshes/physics.
 
+## Native Windows / Android alpha
+
+A separate **real Godot native client**, not a WebView, is being shipped alongside this web version. The native branch of the project is **0.4.0-alpha.1**; the web runtime remains 0.3.0.
+
+- [Native project, controls, downloads and feature-parity limits](native/README.md)
+- [Native Windows/Android build workflow](https://github.com/xykal/veyra-neon-district/actions/workflows/native.yml)
+- [Native alpha downloads](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.4.0-alpha.1)
+
+The native client adds artist-authored humanoids, imported animation clips, physical Jolt ragdolls, native spatial sound and offline 6-DOF vehicle simulation. **Online still uses the existing authoritative planar server adapter; voice/full wardrobe and several web systems are not complete native parity.** See the native guide rather than assuming an APK automatically equals GTA/FiveM realism or universal device performance.
+
 ## Main features
 
 - Third-person camera, animated humanoids, day/night, weather, building windows/neon, street furniture, pedestrians and wall fade.
