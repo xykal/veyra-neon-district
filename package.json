@@ -2,7 +2,7 @@
   "name": "veyra-neon-district",
   "version": "0.2.0",
   "private": true,
-  "description": "Veyra: Neon District — 3D multiplayer city sandbox for desktop and mobile browsers.",
+  "description": "Veyra: Neon District \u2014 3D multiplayer city sandbox for desktop and mobile browsers.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
@@ -12,10 +12,23 @@
     "test": "node --test tests/*.test.mjs",
     "test:e2e": "playwright test",
     "build": "node tools/build.mjs",
-    "assets": "node tools/create-bus.mjs && node tools/gen-manifest.mjs"
+    "assets": "node tools/create-bus.mjs && node tools/gen-manifest.mjs",
+    "dev:cloudflare": "node tools/build-cloudflare.mjs && wrangler dev --local",
+    "build:cloudflare": "node tools/build-cloudflare.mjs && wrangler deploy --dry-run --outdir dist/cloudflare-worker",
+    "deploy:cloudflare": "node tools/build-cloudflare.mjs && wrangler deploy",
+    "test:cloudflare": "node --test --test-concurrency=1 tests/cloudflare/*.test.mjs",
+    "test:e2e:cloudflare": "playwright test --config playwright.cloudflare.config.mjs"
   },
-  "engines": { "node": ">=22" },
-  "devDependencies": { "@playwright/test": "1.56.1" },
-  "repository": { "type": "git", "url": "https://github.com/xykal/veyra-neon-district.git" },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "wrangler": "4.151.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xykal/veyra-neon-district.git"
+  },
   "license": "MIT"
 }

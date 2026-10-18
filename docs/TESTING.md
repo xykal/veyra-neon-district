@@ -2,8 +2,9 @@
 
 Date: 2026-10-18. The committed automated checks are run by GitHub Actions on every main push / pull request. The workflow status is authoritative for a particular commit; this document describes the test suite, not a perpetual guarantee.
 
-## Automated Node checks (26 tests)
+## Automated Node/game/SQLite checks (30 tests)
 
+- Four SQLite profile tests: cold restore/hash secrecy, live/offline deduplication, ranking with lower live scores, bound parameters and invalid numeric values.
 - Deterministic maps, 18 physics classes and 22 accessible POIs.
 - All 484 POI-pair GPS routes avoid building/water blockers; 1,000 road-spawn samples remain in bounds.
 - Finite acceleration/braking across vehicle classes, larger handbrake slip, vector collision impulse, front-impact damage.
@@ -50,3 +51,14 @@ The browser suite starts its own isolated server on port 3101 and uses ignored `
 - Full realistic vehicle dynamics. The driving simulation is planar/arcade with visual suspension, not 3D rigid-body physics; GPS destinations are POIs rather than functional interiors.
 
 Headless software rendering is useful for correctness but **not a device performance benchmark**. The quality tiers, culling, touch UI and Lite fallback improve accessibility; they do not justify saying "smooth on every device." Test target devices and choose player limits/hosting based on actual measurements before a public launch.
+
+
+## Cloudflare adapter verification
+
+- `npm test` now includes four real-SQLite profile/ranking/security tests (30 cases total).
+- `npm run build:cloudflare` stages only public assets/shared modules and compiles a dry-run Worker bundle.
+- `npm run test:cloudflare`: eight tests on actual local workerd + native WebSockets + SQLite, including an actual process restart and saved moving-player identity. Tests use temporary ignored storage and no cloud credentials.
+- `npm run test:e2e:cloudflare`: the same seven Chromium desktop/mobile/fallback/WebRTC cases against local Workers, not the Node server.
+- Both browser suites must pass before the CI Docker-publish or opt-in Cloudflare-deploy job starts.
+
+Full deployment/lifecycle/quota details: [CLOUDFLARE.md](CLOUDFLARE.md). Physical-device, WAN voice, capacity and third-party security-audit limitations still apply.

@@ -14,3 +14,7 @@ coverage/
 .DS_Store
 *.pem
 *.key
+
+.wrangler/
+.dev.vars
+.dev.vars.*

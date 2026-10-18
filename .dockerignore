@@ -11,3 +11,7 @@ uploads
 .env.*
 env.txt
 *.log
+
+.wrangler/
+.dev.vars
+.dev.vars.*

@@ -7,8 +7,8 @@ import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { acceptWebSocket } from './wsserver.js';
 import { Profiles } from './profiles.js';
-import { Game } from '../shared/game.js';
-import { MSG, TICK_HZ } from '../shared/constants.js';
+import { WorldRoom } from './room.js';
+import { TICK_HZ } from '../shared/constants.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json', '.webmanifest':'application/manifest+json', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.ico':'image/x-icon', '.glb':'model/gltf-binary' };
@@ -17,9 +17,6 @@ export function createApp(options = {}) {
   const seed = Number(options.seed ?? process.env.SEED) || 20251018;
   const dataDir = options.dataDir || process.env.DATA_DIR || path.join(ROOT, 'data');
   const profiles = new Profiles(path.join(dataDir, 'profiles.json'));
-  const game = new Game({ seed });
-  const conns = new Map();
-  const ipCounts = new Map();
   const staticCache = new Map();
   const maxPlayers = Math.max(2, Math.min(64, Number(process.env.MAX_PLAYERS) || 64));
   const publicOrigins = new Set((process.env.PUBLIC_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean));
@@ -28,7 +25,8 @@ export function createApp(options = {}) {
     try { const conf = JSON.parse(process.env.ICE_SERVERS); if (Array.isArray(conf)) iceServers = conf; }
     catch { console.warn('ICE_SERVERS tidak valid, memakai STUN default.'); }
   }
-  game.leaderboard = { top: n => profiles.top(n, game.players.values()) };
+  const room = new WorldRoom({ profiles, seed, maxPlayers, iceServers });
+  const { game, conns } = room;
   const json = (res, code, value) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); };
   const httpServer = http.createServer((req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -68,12 +66,6 @@ export function createApp(options = {}) {
   });
   httpServer.requestTimeout = 10000; httpServer.headersTimeout = 10000;
   httpServer.keepAliveTimeout = 5000; httpServer.maxHeadersCount = 64;
-  const broadcastRaw = raw => { for (const c of conns.values()) c.send(raw, raw.startsWith('{"t":"s",')); };
-  const sendRaw = (id, raw) => conns.get(id)?.send(raw, raw.startsWith('{"t":"s",'));
-  const broadcast = obj => broadcastRaw(JSON.stringify(obj));
-  game.io = { broadcastRaw, sendRaw };
-  const roster = () => broadcast({ t:'vpeers', ids:[...game.players.values()].filter(p => p.voiceReady).map(p => p.id) });
-
   httpServer.on('upgrade', (req, socket, head) => {
     let validOrigin = true;
     if (req.headers.origin) {
@@ -84,78 +76,19 @@ export function createApp(options = {}) {
       } catch { validOrigin = false; }
     }
     const ip = socket.remoteAddress;
-    if (!validOrigin || req.url !== '/' || conns.size >= maxPlayers || (ipCounts.get(ip) || 0) >= 12) {
+    if (!validOrigin || req.url !== '/' || !room.canAccept(ip)) {
       socket.end('HTTP/1.1 ' + (!validOrigin ? '403 Forbidden' : '503 Service Unavailable') + '\r\nConnection: close\r\n\r\n'); return;
     }
     const conn = acceptWebSocket(req, socket, head);
     if (!conn) return;
-    const id = game.nextPlayerId++;
-    conns.set(id, conn); ipCounts.set(ip, (ipCounts.get(ip) || 0) + 1);
-    let player = null, tokens = 180, lastToken = performance.now(), helloTimer;
-    helloTimer = setTimeout(() => conn.close(1008), 10000); helloTimer.unref();
-    conn.onMessage = raw => {
-      const now = performance.now(); tokens = Math.min(180, tokens + (now - lastToken) * .09); lastToken = now;
-      if (--tokens < 0) return conn.close(1008);
-      let msg;
-      try { msg = JSON.parse(raw); } catch { return; }
-      if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
-      if (msg.t === MSG.HELLO && !player) {
-        let session = profiles.resume(msg.r);
-        // One active connection per saved profile, avoiding wallet rollback/duplication.
-        for (const p of game.players.values()) {
-          if (p.profileKey === session.key) { profiles.record(p); conns.get(p.id)?.close(4001); }
-        }
-        if (session.data) session = profiles.resume(session.token);
-        const name = String(msg.n || 'Warga').slice(0, 64).replace(/[^\p{L}\p{N}_ .-]/gu, '').trim().slice(0, 16) || 'Warga';
-        player = game.addPlayer(name, id); profiles.restore(player, session); profiles.record(player);
-        clearTimeout(helloTimer);
-        conn.send(JSON.stringify({ t:MSG.WELCOME, id:player.id, name:player.name, seed:game.seed, r:session.token, voice:{ iceServers, limit:8 } }));
-        broadcast({ t:MSG.SYSTEM, m:`${player.name} masuk distrik.` });
-        game.sendLeaderboard(player); return;
-      }
-      if (!player) return;
-      player.lastSeen = performance.now();
-      if (msg.t === MSG.INPUT) player.lastInput = performance.now();
-      if (msg.t === 'vsig') {
-        const d = msg.d;
-        if (!d || typeof d !== 'object') return;
-        if (d.k === 'join') {
-          if ([...game.players.values()].filter(p => p.voiceReady).length >= 8 && !player.voiceReady) {
-            return conn.send(JSON.stringify({ t:'verr', m:'Voice penuh (maksimal 8 mic). Coba sebentar lagi.' }));
-          }
-          player.voiceReady = true; roster(); return;
-        }
-        if (d.k === 'leave') { player.voiceReady = false; roster(); broadcast({ t:'vsig', from:id, d:{ k:'talk', on:false } }); return; }
-        if (!player.voiceReady) return;
-        if (d.k === 'talk') { broadcast({ t:'vsig', from:id, d:{ k:'talk', on:!!d.on } }); return; }
-        const to = Number(msg.to), target = game.players.get(to);
-        if (to === id || !target?.voiceReady || !['offer','answer','ice'].includes(d.k)) return;
-        if ((d.k === 'offer' || d.k === 'answer') && (typeof d.sdp !== 'string' || d.sdp.length > 24000)) return;
-        if (d.k === 'ice' && (typeof d.c !== 'object' || JSON.stringify(d.c).length > 2048)) return;
-        conns.get(to)?.send(JSON.stringify({ t:'vsig', from:id, d })); return;
-      }
-      game.handleMessage(player, raw);
-    };
-    conn.onClose = () => {
-      clearTimeout(helloTimer);
-      conns.delete(id); ipCounts.set(ip, Math.max(0, (ipCounts.get(ip) || 1) - 1));
-      if (ipCounts.get(ip) === 0) ipCounts.delete(ip);
-      if (player) {
-        profiles.record(player); game.removePlayer(id);
-        broadcast({ t:MSG.SYSTEM, m:`${player.name} keluar distrik.` });
-        if (player.voiceReady) roster();
-      }
-    };
+    room.accept(conn, ip);
   });
   let previous = performance.now(), closed = false;
   const loop = setInterval(() => {
     const now = performance.now(), dt = Math.min(.1, (now - previous) / 1000); previous = now;
-    for (const p of game.players.values()) {
-      if (now - (p.lastInput ?? now) > 700) p.input = {};
-    }
-    game.tick(dt);
+    room.tick(dt, now);
   }, 1000 / TICK_HZ);
-  const save = () => { for (const p of game.players.values()) profiles.record(p); try { profiles.save(); } catch (e) { console.error('Gagal menyimpan progres:', e.message); } };
+  const save = () => { try { room.save(); } catch (e) { console.error('Gagal menyimpan progres:', e.message); } };
   const autosave = setInterval(save, 10000);
   const heartbeat = setInterval(() => {
     for (const c of conns.values()) { if (Date.now() - c.lastPong > 65000) c.close(1001); else c.ping(); }

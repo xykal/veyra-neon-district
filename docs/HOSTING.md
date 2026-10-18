@@ -2,7 +2,9 @@
 
 ## Architecture / what to choose
 
-One long-running Node 24 process serves the files, accepts WebSocket clients and simulates one city. Player progress is in a JSON file. Use **one instance**, HTTPS, and a persistent volume. More replicas would create separate worlds and risk inconsistent progress.
+**Cloudflare is now supported natively:** see [CLOUDFLARE.md](CLOUDFLARE.md) for Workers + one SQLite-backed Durable Object, local workerd tests and Actions deployment. This keeps the same authoritative gameplay without a VPS. Static-only Pages is not enough. Vercel also has native WebSocket beta support, but this repository does not currently include a Vercel state-coordination adapter; it is not a claim that Vercel cannot serve WebSockets.
+
+The alternative **Node/Docker adapter** uses one long-running Node 24 process to serve files, accept WebSocket clients and simulate one city. Player progress is in a JSON file. Use **one instance**, HTTPS, and a persistent volume. More replicas would create separate worlds and risk inconsistent progress.
 
 Practical options:
 

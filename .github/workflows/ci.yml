@@ -54,9 +54,34 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 7
+  cloudflare:
+    name: Cloudflare · workerd · Mobile · Voice
+    runs-on: ubuntu-latest
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build:cloudflare
+      - run: npm run test:cloudflare
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:cloudflare
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloudflare-results
+          path: |
+            dist/cloudflare-worker/
+            test-results/
+            playwright-report/
+          retention-days: 7
   container:
     name: Docker → GHCR
-    needs: [quality, browser]
+    needs: [quality, browser, cloudflare]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -100,3 +125,30 @@ jobs:
         run: |
           docker logs veyra-smoke || true
           docker rm -f veyra-smoke || true
+  cloudflare-deploy:
+    name: Deploy → Cloudflare
+    needs: [quality, browser, cloudflare]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CLOUDFLARE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cloudflare-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Deploy tested Worker and public assets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+        run: npm run deploy:cloudflare -- --var BUILD_SHA:${{ github.sha }}
+      - name: Verify deployed build, assets and WSS
+        if: vars.CLOUDFLARE_PUBLIC_URL != ''
+        env:
+          CLOUDFLARE_PUBLIC_URL: ${{ vars.CLOUDFLARE_PUBLIC_URL }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node tools/smoke-cloudflare.mjs

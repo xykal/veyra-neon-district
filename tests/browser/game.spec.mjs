@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-const base='http://127.0.0.1:3101';
+const base=process.env.VEYRA_TEST_BASE || (process.env.VEYRA_TEST_CLOUDFLARE ? 'http://127.0.0.1:3104' : 'http://127.0.0.1:3101');
 async function join(page, name='Tester', offline=false) {
   await page.goto(`${base}/${offline?'?offline=1':''}`);
   await page.locator('#nickname').fill(name);await page.locator('#playbtn').click();

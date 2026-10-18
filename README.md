@@ -4,7 +4,9 @@
 
 **Satu kota. Banyak cerita. Giliran lo bikin jejak.**
 
-Independent browser-based **3D third-person multiplayer city sandbox**, inspired by the freedom of classic multiplayer city games. Built with Node.js + locally vendored Three.js. Desktop keyboard/mouse and mobile touch controls. No GTA / Rockstar / SA-MP game assets.
+**Play:** [https://veyra-neon-district.dikanjut.workers.dev](https://veyra-neon-district.dikanjut.workers.dev) · deployment and health checks run through GitHub Actions.
+
+Independent browser-based **3D third-person multiplayer city sandbox**, inspired by the freedom of classic multiplayer city games. Built with locally vendored Three.js and a shared authoritative backend for **Node/Docker or Cloudflare Workers + Durable Objects**. Desktop keyboard/mouse and mobile touch controls. No GTA / Rockstar / SA-MP game assets.
 
 > **Alpha 0.2.0**, not a finished MMO. Real 3D rendering with a planar authoritative simulation; no jumping, interiors, vertical vehicle physics or account-login system yet. Performance depends on GPU, browser, heat and network—not a promise of 60 FPS on every device.
 
@@ -15,7 +17,7 @@ Independent browser-based **3D third-person multiplayer city sandbox**, inspired
 - Third-person camera, animated humanoids, day/night, weather, building windows/neon, street furniture, pedestrians and wall fade.
 - **18 vehicle classes:** sedan, sport, pickup, police, taxi, motorbike, tractor, ambulance, firetruck, garbage truck, delivery, SUV, luxury SUV, supercar, kart, shovel, van and original city bus. 17 GLB templates + procedural motorbike; shared driving model with braking, slip, handbrake, collision damage and suspension visuals.
 - Server-owned movement, shooting, health, money, wanted/police pursuit, vehicle occupancy, delivery rewards and chat.
-- **Saved progress:** wallet, kills/deaths, completed jobs, distance, play time and best speed. Atomic JSON writes every 10 seconds, on graceful shutdown, and retained on disconnect. Resume identity stays in this browser; the server stores only its SHA-256 hash. Names are display names, not authenticated accounts.
+- **Saved progress:** wallet, kills/deaths, completed jobs, distance, play time and best speed. Node uses atomic JSON writes every 10 seconds; Cloudflare uses private SQLite, saves every 30 seconds and flushes on join/disconnect. Resume identity stays in this browser; the server stores only its SHA-256 hash. Names are display names, not authenticated accounts.
 - **District Legends:** deduplicated saved/live top 25. Score = money + 100 × kills + 50 × jobs.
 - **GPS:** 22 searchable destinations, keyword synonyms, road-following obstacle-free routes, 3D marker + minimap line. Named POIs are navigation locations, not functioning banks/shops/interiors.
 - **Opt-in proximity voice:** WebRTC mesh, max 8 opted-in microphones, push-to-talk V/VOX, distance volume. No audio recording. HTTPS + mic permission required; STUN alone cannot traverse every NAT—production needs a suitable TURN service.
@@ -68,9 +70,18 @@ On mobile, use the left joystick and swipe on the right. **FIRE / NAIK / TURUN /
 
 ## Hosting / deployment
 
-**This is not a static-only site.** Keep one long-running Node/Docker instance with HTTP + WebSocket and a persistent directory for progress. Do not put the entire authoritative game in a stateless static-site deployment.
+**This is not a static-only site.** Choose the Cloudflare adapter with one stateful Durable Object, or one long-running Node/Docker instance with HTTP + WebSocket and persistent storage. A plain static-site upload does not run the multiplayer world.
 
-**Recommended starting paths:**
+**Recommended: [Cloudflare Workers + Durable Objects](docs/CLOUDFLARE.md).** `wrangler.jsonc` includes same-origin static assets, a single city, native WebSockets and SQLite progression. Default 16 slots; simulation stops when empty. It works with SQLite-backed objects on the Free plan, subject to daily quotas—not unlimited free hosting.
+
+```sh
+npm ci --ignore-scripts
+npm run dev:cloudflare       # real local Workers runtime + local SQLite
+npm run build:cloudflare     # dry-run bundle, no cloud credentials needed
+npm run deploy:cloudflare    # requires private Cloudflare deployment credentials
+```
+
+**Existing Node/Docker alternatives remain supported:**
 
 1. **Render Web Service**, build from this repository's Dockerfile, attach persistent disk `/app/data`. `render.yaml` is a ready Blueprint **with a paid starter service + disk**; review provider pricing before approving it.
 2. **Railway**, deploy this GitHub repository; Dockerfile + `railway.json` are included. Add a Volume at `/app/data`, set `DATA_DIR=/app/data`, generate a public HTTPS domain.
@@ -84,22 +95,25 @@ docker compose up -d --build
 # Open http://YOUR-SERVER-IP:3000 (put behind HTTPS before using voice).
 ```
 
-`MAX_PLAYERS` is capped at 64 as a safety bound, **not a verified 64-player capacity claim**. Start small and load-test your chosen CPU / region. Use exactly **one replica**: the in-memory world and JSON persistence do not support horizontal scaling. Players reconnect after deployments, but position/vehicle/wanted are not restored.
+`MAX_PLAYERS` is capped at 64 as a safety bound, **not a verified 64-player capacity claim**. Start small and load-test your chosen CPU / region. On Node, use exactly **one replica**: the in-memory world and JSON persistence do not support horizontal scaling. Cloudflare routes all sockets to one fixed `City` object; its HTTP entrypoint may scale without duplicating the world. Players reconnect after deployments, but position/vehicle/wanted are not restored.
 
 ## GitHub Actions & images
 
 Every push to `main`, tag `v*`, PR, or manual run triggers:
 
-1. Syntax / secret-pattern hygiene, 26 Node unit+integration tests on Node 22 **and** 24.
-2. Seven Chromium browser tests covering desktop, mobile portrait/landscape, two-client chat/reconnect, 2D fallback and real two-peer WebRTC with fake microphone RTP.
-3. Reproducible runtime packaging into an Actions artifact (`dist/` + `SHA256SUMS`).
-4. **Only after tests pass**, build and push multi-architecture Docker images (`linux/amd64`, `linux/arm64`) to:
+1. Syntax / secret-pattern hygiene, 30 Node/game/SQLite unit+integration tests on Node 22 **and** 24.
+2. Seven Chromium browser tests **on each backend** covering desktop, mobile portrait/landscape, two-client chat/reconnect, 2D fallback and real two-peer WebRTC with fake microphone RTP.
+3. Eight integration tests against real local Cloudflare `workerd`, including durable restart, identity handoff, flooding, origin checks and public asset boundaries.
+4. Reproducible runtime packaging into an Actions artifact (`dist/` + `SHA256SUMS`).
+5. **Only after all backend tests pass**, build and push multi-architecture Docker images (`linux/amd64`, `linux/arm64`) to:
 
 ```text
 ghcr.io/xykal/veyra-neon-district:latest
 ghcr.io/xykal/veyra-neon-district:sha-<commit>
 ghcr.io/xykal/veyra-neon-district:v0.2.0  # when that release tag is pushed
 ```
+
+Cloudflare deploy runs after those same checks when Actions secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` and variable `CLOUDFLARE_DEPLOY_ENABLED=true` are configured. Only pushes to `main` deploy; pull requests never get hosting credentials. See [the Cloudflare guide](docs/CLOUDFLARE.md).
 
 The published image is also started in CI: health endpoint, writable data directory and non-root game-process UID are checked.
 
@@ -114,6 +128,9 @@ npm test
 npx playwright install --with-deps chromium
 npm run test:e2e
 npm run build
+npm run build:cloudflare
+npm run test:cloudflare
+npm run test:e2e:cloudflare
 npm run assets       # regenerate original bus + model metadata only when changing assets
 ```
 
