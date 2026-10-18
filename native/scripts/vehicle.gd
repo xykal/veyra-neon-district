@@ -26,12 +26,14 @@ var audio_node=null
 var ai_target=Vector3.ZERO
 var headlamp_nodes=[]
 var headlamps_on=false
+static var templates={}
 var impact_cooldown=0.0
 var net_seen=false
 var net_target=Vector3.ZERO
 var net_yaw=0.0
 const FILES={"sedan":"sedan","sport":"sport","truck":"pickup","police":"police","taxi":"taxi","van":"van","bus":"bus","ambulance":"ambulance","firetruck":"firetruck","garbage":"garbage-truck","delivery":"delivery","suv":"suv","luxury":"suv-luxury","supercar":"race","kart":"kart-ooli","shovel":"tractor-shovel","tractor":"tractor"}
 const ROTATED=["taxi","ambulance","firetruck","garbage","delivery","suv","luxury","supercar","kart","shovel"]
+static func clear_template_cache():templates.clear()
 func configure(record,types,tier=0,audio=null):
  vehicle_id=int(record.id);kind=str(record.type);definition=types.get(kind,types.sedan);length_m=float(definition.len)/10.0;width_m=float(definition.wid)/10.0
  mass=float(definition.mass)*1300;center_of_mass_mode=RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM;center_of_mass=Vector3(0,.45,0);linear_damp=.035;angular_damp=.5;collision_layer=2;collision_mask=1|2|4|8
@@ -44,7 +46,11 @@ func configure(record,types,tier=0,audio=null):
  global_position=Vector3(float(record.x)/10,.03,float(record.y)/10);rotation.y=-float(record.a)
 func _load_model(tier):
  visual=Node3D.new();add_child(visual)
- var file=FILES.get(kind,"sedan");var model=load("res://assets/cars/"+file+".glb").instantiate();visual.add_child(model)
+ var file=FILES.get(kind,"sedan");var path="res://assets/cars/"+file+".glb"
+ if not templates.has(path):
+  templates[path]=load(path)
+  if templates.size()>8:templates.erase(templates.keys()[0])
+ var model=templates[path].instantiate();visual.add_child(model)
  if kind in ROTATED:model.rotation.y=PI/2
  model.force_update_transform()
  var box=_bounds(model);var size=box.size;model.position-=Vector3(box.position.x+size.x/2,box.position.y,box.position.z+size.z/2)
@@ -72,7 +78,7 @@ func _physics_process(delta):
  if networked:
   global_position=global_position.lerp(net_target,1-exp(-delta*16));rotation.y=lerp_angle(rotation.y,net_yaw,1-exp(-delta*16));_animate_wheels(delta);return
  if freeze:
-  _animate_wheels(delta);return
+  return
  if ai and driver==0:_autopilot()
  var forward=global_basis.x.normalized();speed_mps=linear_velocity.dot(forward);last_speed=linear_velocity.length();steering=lerpf(steering,steer,1-exp(-delta*7));wheel_contacts=0
  var state=get_world_3d().direct_space_state
@@ -101,6 +107,7 @@ func _physics_process(delta):
  apply_central_force(-linear_velocity*linear_velocity.length()*.45)
  _animate_wheels(delta)
 func _animate_wheels(delta):
+ if absf(speed_mps)<.015 and absf(steering)<.015:return
  wheel_spin-=speed_mps*delta/.34
  for w in wheel_nodes:
   var axis=Vector3.RIGHT if kind in ROTATED else Vector3.FORWARD

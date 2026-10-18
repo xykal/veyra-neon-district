@@ -18,6 +18,7 @@ var seen_meshes=[]
 var weapon:Node3D
 var muzzle:Marker3D
 var attack_time=0.0
+var ragdoll_prepared=false
 func _init():
  pass
 func setup(preset=0,quality=1):
@@ -42,11 +43,10 @@ func setup(preset=0,quality=1):
    if short_pants:node.visible=look==4
    if long_pants:node.visible=look!=4
    if short_top or long_top or short_pants or long_pants:
-    var m=StandardMaterial3D.new();m.albedo_color=COATS[look] if short_top or long_top else Color("263142");m.roughness=.86;node.material_override=m
+    var m=StandardMaterial3D.new();m.albedo_color=COATS[look] if short_top or long_top else Color("263142");m.roughness=.86;m.grow=true;m.grow_amount=.024 if short_top or long_top else .006;node.material_override=m
  var shapes=[Vector3.ONE,Vector3.ONE*1.02,Vector3.ONE*1.05,Vector3.ONE,Vector3.ONE*.97,Vector3.ONE*1.03]
  model.scale=shapes[look]
  _add_hair()
- _make_ragdoll()
  _add_weapon()
  current="";play_motion("Idle_Loop")
  if animator:animator.seek(0,true)
@@ -60,6 +60,9 @@ func _all(root):
  var out=[root]
  for child in root.get_children():out.append_array(_all(child))
  return out
+func set_active(value):
+ process_mode=Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
+ if animator:animator.active=value
 func _add_hair():
  var attachment=BoneAttachment3D.new();attachment.bone_name="Head";skeleton.add_child(attachment)
  var names=["parted","buzz","buzz","long","buns","parted"]
@@ -88,6 +91,8 @@ func _process(delta):
  attack_time=maxf(0,attack_time-delta)
  if ragdoll and weapon:weapon.visible=false
 func _make_ragdoll():
+ if ragdoll_prepared:return
+ ragdoll_prepared=true
  simulator=PhysicalBoneSimulator3D.new();skeleton.add_child(simulator)
  var specs=[ ["pelvis",.12,.20,8.0],["spine_03",.13,.26,10.0],["Head",.105,.22,4.0], ["upperarm_l",.055,.25,1.8],["lowerarm_l",.045,.24,1.2],["upperarm_r",.055,.25,1.8],["lowerarm_r",.045,.24,1.2], ["thigh_l",.075,.42,4.5],["calf_l",.055,.44,2.6],["thigh_r",.075,.42,4.5],["calf_r",.055,.44,2.6] ]
  if bone_count>11:specs.append_array([["hand_l",.04,.12,.5],["hand_r",.04,.12,.5],["foot_l",.06,.16,.9],["foot_r",.06,.16,.9]])
@@ -128,6 +133,7 @@ func locomotion(speed,sprinting,airborne=false,crouched=false,seated=false,aim=f
  play_motion(clip,clampf(speed/3,.85,1.15) if clip=="Jog_Fwd_Loop" else 1.0)
 func start_ragdoll(impulse=Vector3.ZERO):
  if ragdoll:return
+ if not ragdoll_prepared:_make_ragdoll()
  ragdoll=true
  if animator:animator.stop(true)
  simulator.physical_bones_start_simulation()

@@ -1,0 +1,27 @@
+{
+  "draw_calls_median": 78,
+  "frame_ms_mean": 38.7693666666667,
+  "frame_ms_p50": 37.7,
+  "frame_ms_p95": 45.414,
+  "godot": "4.7.2-stable (official)",
+  "label": "native-0.4.1-alpha.1",
+  "loaded_practice_actors": 2,
+  "loaded_vehicles": 12,
+  "nodes": 2671,
+  "note": "Uncapped native editor render capture; software/hardware host results are NOT a physical Android FPS guarantee.",
+  "physics_bodies_3d": 0,
+  "primitives_median": 13089,
+  "profile": "LOW",
+  "render_scale": 0.699999988079071,
+  "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+  "resources": 218,
+  "sample_frames": 30,
+  "startup_to_playable_frame_ms": 1176.293,
+  "static_memory_mb": 113.521704673767,
+  "uncapped_fps_from_mean": 25.7935603797156,
+  "video_memory_mb": 42.6691694259644,
+  "viewport": [
+    1280,
+    720
+  ]
+}

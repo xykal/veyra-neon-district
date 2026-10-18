@@ -12,10 +12,11 @@ func run():
  print("Native model bones=",a.skeleton.get_bone_count()," clips=",a.animator.get_animation_list())
  check(a.skeleton.get_bone_count()==65,"Artist mesh skeleton missing")
  check(a.animator.has_animation("Idle"),"Authored idle clip missing")
- for b in a.physical:check(b.get_bone_id()>=0,"Physical bone failed binding: "+b.name)
+ check(a.physical.is_empty(),"Ragdoll bodies must be lazy while animated")
  a.play_motion("Jog_Fwd_Loop")
  for i in range(30):await physics_frame
  a.position.y=1.0;a.start_ragdoll(Vector3(1,0,0))
+ for b in a.physical:check(b.get_bone_id()>=0,"Physical bone failed binding: "+b.name)
  for i in range(180):await physics_frame
  print("Ragdoll body positions: ",a.physical.map(func(b):return b.global_position))
  for b in a.physical:check(b.global_position.is_finite(),"Ragdoll non-finite");check(b.global_position.y>-.5 and b.global_position.y<3.5,"Ragdoll unstable or through floor")

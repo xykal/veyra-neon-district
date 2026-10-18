@@ -2,11 +2,11 @@ extends RefCounted
 
 const SAVE_PATH = "user://preferences.json"
 const PRESETS = [
- {"name":"LOW · 2–3 GB","distance":70.0,"scale":0.7,"shadows":false,"ragdolls":1,"people":4,"fps":30,"lod":0.5},
- {"name":"BALANCED · 4 GB","distance":115.0,"scale":0.85,"shadows":true,"ragdolls":3,"people":8,"fps":60,"lod":1.0},
- {"name":"HIGH · 6–8 GB+","distance":180.0,"scale":1.0,"shadows":true,"ragdolls":6,"people":14,"fps":60,"lod":1.4}
+ {"name":"SAFE · hemat GPU","distance":65.0,"scale":0.7,"shadows":false,"ragdolls":1,"people":2,"vehicles":12,"remote":6,"fps":30,"lod":0.6},
+ {"name":"BALANCED","distance":100.0,"scale":0.85,"shadows":true,"ragdolls":2,"people":4,"vehicles":24,"remote":10,"fps":60,"lod":1.0},
+ {"name":"HIGH · manual","distance":150.0,"scale":1.0,"shadows":true,"ragdolls":3,"people":8,"vehicles":40,"remote":16,"fps":60,"lod":1.3}
 ]
-var data = {"nickname":"Warga","token":"","tokens":{},"look":0,"quality":-1,"master":0.8,"sfx":0.85,"ambient":0.35,"server":"wss://veyra-neon-district.dikanjut.workers.dev/"}
+var data = {"nickname":"Warga","token":"","tokens":{},"look":0,"quality":-1,"master":0.8,"sfx":0.85,"ambient":0.35,"perf_revision":0,"look_sensitivity":1.0,"server":"wss://veyra-neon-district.dikanjut.workers.dev/"}
 func _init():
  if FileAccess.file_exists(SAVE_PATH):
   var f=FileAccess.open(SAVE_PATH,FileAccess.READ)
@@ -19,14 +19,19 @@ func _init():
  if not str(data.token).is_valid_hex_number() or str(data.token).length()!=64:data.token=""
  data.look=clampi(int(data.look),0,5)
  data.quality=clampi(int(data.quality),-1,2)
+ if int(data.perf_revision)<1 and OS.has_feature("mobile"):data.quality=-1
+ data.perf_revision=1
+ data.look_sensitivity=clampf(float(data.look_sensitivity),.45,1.8)
+ if not data.tokens is Dictionary:data.tokens={}
+ data.master=clampf(float(data.master),0,1)
 func save():
  var f=FileAccess.open(SAVE_PATH,FileAccess.WRITE)
  if f:f.store_string(JSON.stringify(data))
 func auto_tier():
+ # RAM is not GPU performance. Android always boots conservatively; High is explicit opt-in.
  var ram=OS.get_memory_info().get("physical",0)/1073741824.0
- if ram>0 and ram<3.6:return 0
- if ram>=5.5:return 2
- return 1 if not OS.has_feature("mobile") else 0
+ if OS.has_feature("mobile") or (ram>0 and ram<3.8):return 0
+ return 1
 func tier():
  return auto_tier() if int(data.quality)<0 else int(data.quality)
 func appearance():

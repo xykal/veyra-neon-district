@@ -7,7 +7,7 @@ func _initialize():call_deferred("run")
 func run():
  var game=load("res://scenes/main.tscn").instantiate();root.add_child(game)
  for i in range(4):await physics_frame
- game.start_game(false)
+ await game.start_game(false)
  for i in range(20):await physics_frame
  game.candidate=game._candidate();check(game.candidate!=null,"normal spawn has an accessible vehicle")
  if game.candidate==null:quit(1);return

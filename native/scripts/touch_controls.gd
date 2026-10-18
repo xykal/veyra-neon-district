@@ -1,10 +1,53 @@
 extends Control
-
+# True per-pointer controls; not mouse-emulated Buttons, so steering + gas + look work together.
 signal action(name,pressed)
+
+class ActionPad extends Control:
+ signal changed(key,on)
+ var key=""
+ var caption=""
+ var down=false
+ var pointer=-1
+ var accent=Color("9de1cc")
+ func _ready():mouse_filter=Control.MOUSE_FILTER_STOP
+ func set_down(value):
+  if down==value:return
+  down=value;queue_redraw();changed.emit(key,value)
+ func _gui_input(event):
+  if event is InputEventScreenTouch:
+   if event.pressed and pointer==-1:pointer=event.index;set_down(true);accept_event()
+   elif not event.pressed and event.index==pointer:pointer=-1;set_down(false);accept_event()
+  elif event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT:
+   if event.pressed and pointer==-1:pointer=-2;set_down(true);accept_event()
+   elif not event.pressed and pointer==-2:pointer=-1;set_down(false);accept_event()
+ func clear():pointer=-1;set_down(false)
+ func _draw():
+  var center=size*.5;var r=minf(size.x,size.y)*.5-2
+  draw_circle(center,r,Color(.055,.09,.12,.8) if not down else Color(.18,.36,.34,.94))
+  draw_arc(center,r,0,TAU,40,Color(accent,.55 if not down else 1),1.4,true)
+  if key in ["gas","reverse"]:
+   var box=Rect2(center-Vector2(10,16),Vector2(20,23));draw_style_box(_pedal_style(),box)
+   for y in [-10,-4,2]:draw_line(center+Vector2(-6,y),center+Vector2(6,y),accent,1.4,true)
+  elif key in ["left","right"]:
+   var sign=-1 if key=="left" else 1
+   draw_polyline(PackedVector2Array([center+Vector2(-sign*4,-9),center+Vector2(sign*6,0),center+Vector2(-sign*4,9)]),accent,2.5,true)
+  elif key=="fire" or key=="aim":
+   draw_arc(center-Vector2(0,5),10,0,TAU,24,accent,1.4,true)
+   for d in [Vector2.RIGHT,Vector2.LEFT,Vector2.UP,Vector2.DOWN]:draw_line(center-Vector2(0,5)+d*7,center-Vector2(0,5)+d*14,accent,1.2,true)
+  elif key=="jump":
+   draw_polyline(PackedVector2Array([center+Vector2(-8,-1),center+Vector2(0,-10),center+Vector2(8,-1)]),accent,2,true);draw_line(center+Vector2(0,-10),center+Vector2(0,8),accent,2,true)
+  var font=get_theme_default_font();var font_size=10 if size.x>=52 else 9
+  var y=center.y+22 if key in ["gas","reverse","fire","aim","jump"] else center.y+4
+  var width=font.get_string_size(caption,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size).x
+  draw_string(font,Vector2(center.x-width/2,y),caption,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size,accent)
+ func _pedal_style():
+  var style=StyleBoxFlat.new();style.bg_color=Color(accent,.17);style.border_color=accent;style.set_border_width_all(1);style.set_corner_radius_all(3);return style
+
 var enabled=false
 var axis=Vector2.ZERO
 var look=Vector2.ZERO
-var held={"fire":false,"brake":false,"voice":false}
+var held={"fire":false,"aim":false,"jump":false,"brake":false,"gas":false,"reverse":false,"left":false,"right":false}
+var sprint_toggle=false
 var stick_id=-1
 var look_id=-1
 var origin=Vector2.ZERO
@@ -12,45 +55,70 @@ var last_look=Vector2.ZERO
 var stick_pos=Vector2.ZERO
 var buttons={}
 var driving=false
+var safe_margin=Vector2.ZERO
+var bottom_inset=0.0
 func _ready():
  set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);mouse_filter=Control.MOUSE_FILTER_IGNORE
  enabled=OS.has_feature("mobile") or "--touch" in OS.get_cmdline_user_args();visible=enabled
- for spec in [["fire","FIRE",Vector2(-92,-180),68],["action","NAIK",Vector2(-170,-115),60],["brake","JUMP",Vector2(-88,-95),60],["horn","HORN",Vector2(-155,-38),48],["menu","•••",Vector2(-55,15),44],["gps","GPS",Vector2(-107,15),44],["chat","CHAT",Vector2(-159,15),44],["ragdoll","RAG",Vector2(-211,15),44]]:
-  var b=Button.new();b.text=spec[1];b.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT);b.size=Vector2(spec[3],spec[3]);b.set_meta("offset",spec[2]);b.set_meta("key",spec[0]);b.focus_mode=Control.FOCUS_NONE;b.add_theme_font_size_override("font_size",12);add_child(b);buttons[spec[0]]=b
-  var key=spec[0];b.button_down.connect(func():_button(key,true));b.button_up.connect(func():_button(key,false))
- resized.connect(_layout);_layout()
+ var specs=[["fire","FIRE",76],["aim","AIM",56],["action","NAIK",64],["jump","JUMP",60],["sprint","RUN",48],["gas","GAS",80],["reverse","REM / R",70],["brake","H-BRAKE",56],["left","",66],["right","",66],["horn","HORN",48],["menu","•••",42],["gps","GPS",42],["chat","CHAT",42]]
+ for spec in specs:
+  var pad=ActionPad.new();pad.key=spec[0];pad.caption=spec[1];pad.size=Vector2(spec[2],spec[2]);pad.changed.connect(_button);add_child(pad);buttons[spec[0]]=pad
+ resized.connect(_layout);_layout();_visibility()
 func _layout():
- for b in buttons.values():
-  var p=b.get_meta("offset");b.position=Vector2(size.x+p.x,p.y if p.y>=0 else size.y+p.y)
+ var w=size.x;var h=size.y
+ var positions={"fire":Vector2(w-84,h-186),"aim":Vector2(w-164,h-234),"action":Vector2(w-169,h-133),"jump":Vector2(w-81,h-88),"sprint":Vector2(199,h-122),"gas":Vector2(w-80,h-111),"reverse":Vector2(w-178,h-88),"brake":Vector2(w-248,h-174),"left":Vector2(74,h-105),"right":Vector2(158,h-105),"horn":Vector2(w-81,h-237),"menu":Vector2(w-42,40),"gps":Vector2(w-96,40),"chat":Vector2(w-150,40)}
+ if driving:positions.action=Vector2(w-167,h-233)
+ for key in buttons:
+  if key in ["left","right","sprint"]:positions[key].x+=safe_margin.x
+  else:positions[key].x-=safe_margin.y
+  if key not in ["menu","gps","chat"]:positions[key].y-=bottom_inset
+  buttons[key].position=positions[key]-buttons[key].size/2
+func set_insets(left,right,bottom):
+ safe_margin=Vector2(left,right);bottom_inset=bottom;_layout()
+func _visibility():
+ for key in buttons:
+  buttons[key].visible=(key in ["menu","gps","chat","action"]) or (driving and key in ["gas","reverse","brake","left","right","horn"]) or (not driving and key in ["fire","aim","jump","sprint"])
 func _button(key,on):
  if held.has(key):held[key]=on
+ if key=="sprint" and on:sprint_toggle=not sprint_toggle;buttons.sprint.accent=Color("e5d68f") if sprint_toggle else Color("9de1cc");buttons.sprint.queue_redraw()
  action.emit(key,on)
 func set_driving(value):
- driving=value
- if buttons.has("action"):buttons.action.text="TURUN" if value else "NAIK";buttons.brake.text="REM" if value else "JUMP"
+ if driving==value:return
+ driving=value;reset();buttons.action.caption="TURUN" if value else "NAIK";buttons.action.queue_redraw();_layout();_visibility()
 func _input(event):
- if not enabled or not visible:return
+ if not enabled or not is_visible_in_tree():return
  if event is InputEventScreenTouch:
   if event.pressed:
    for b in buttons.values():
-    if b.get_global_rect().has_point(event.position):return
-   if event.position.x<size.x*.44 and event.position.y>size.y*.35 and stick_id<0:stick_id=event.index;origin=event.position;stick_pos=origin;get_viewport().set_input_as_handled()
+    if b.is_visible_in_tree() and b.get_global_rect().has_point(event.position):return
+   if event.position.x<size.x*.44 and event.position.y>size.y*.38 and stick_id<0:
+    stick_id=event.index;origin=event.position;stick_pos=origin;get_viewport().set_input_as_handled()
    elif look_id<0:look_id=event.index;last_look=event.position
   else:
    if event.index==stick_id:stick_id=-1;axis=Vector2.ZERO
    if event.index==look_id:look_id=-1
   queue_redraw()
  elif event is InputEventScreenDrag:
-  if event.index==stick_id:axis=(event.position-origin)/58.0;axis=axis.limit_length(1);stick_pos=origin+axis*58;get_viewport().set_input_as_handled();queue_redraw()
+  if event.index==stick_id:axis=((event.position-origin)/58.0).limit_length(1);stick_pos=origin+axis*58;get_viewport().set_input_as_handled();queue_redraw()
   elif event.index==look_id:look+=event.position-last_look;last_look=event.position;get_viewport().set_input_as_handled()
+func read_move():
+ if not driving:return axis
+ var turn=clampf(axis.x+float(held.right)-float(held.left),-1,1)
+ var throttle=float(held.gas)-float(held.reverse)
+ if absf(throttle)<.01:throttle=-axis.y
+ return Vector2(turn,-throttle)
+func wants_sprint():return sprint_toggle or axis.length()>.9
 func take_look():
  var value=look;look=Vector2.ZERO;return value
 func reset():
- stick_id=-1;look_id=-1;axis=Vector2.ZERO;look=Vector2.ZERO
+ stick_id=-1;look_id=-1;axis=Vector2.ZERO;look=Vector2.ZERO;sprint_toggle=false
  for key in held:held[key]=false
+ for b in buttons.values():b.pointer=-1;b.down=false;b.queue_redraw()
+ if buttons.has("sprint"):buttons.sprint.accent=Color("9de1cc")
  queue_redraw()
 func _draw():
  if not enabled:return
- var center=origin if stick_id>=0 else Vector2(92,size.y-103)
- draw_circle(center,62,Color(.1,.22,.3,.35));draw_arc(center,62,0,TAU,48,Color(.5,.75,.78,.4),1.5)
- draw_circle(stick_pos if stick_id>=0 else center,22,Color(.65,.86,.85,.45))
+ if driving:return
+ var center=origin if stick_id>=0 else Vector2(91+safe_margin.x,size.y-111-bottom_inset)
+ draw_circle(center,62,Color(.045,.08,.11,.6));draw_arc(center,62,0,TAU,48,Color(.6,.85,.8,.4),1.5,true)
+ draw_circle(stick_pos if stick_id>=0 else center,22,Color(.55,.78,.74,.6))

@@ -22,16 +22,24 @@ var external_dead=false
 var correction=Vector2.ZERO
 var quality=0
 var health=100.0
+var last_look_time=-10000
 func setup(look=0,tier=0,audio=null):
  quality=tier;audio_node=audio;collision_layer=4;collision_mask=1|2|16
  collision=CollisionShape3D.new();var capsule=CapsuleShape3D.new();capsule.radius=.42;capsule.height=1.8;collision.shape=capsule;collision.position.y=.9;add_child(collision)
  floor_snap_length=.3;safe_margin=.015
  avatar=Avatar.new();add_child(avatar);avatar.setup(look,tier)
  pivot=Node3D.new();pivot.position.y=1.2;add_child(pivot);spring=SpringArm3D.new();spring.spring_length=4.1;spring.margin=.14;var sphere=SphereShape3D.new();sphere.radius=.14;spring.shape=sphere;spring.collision_mask=1|2|16;spring.add_excluded_object(get_rid());pivot.add_child(spring)
- camera=Camera3D.new();camera.fov=62;camera.near=.07;camera.far=420;spring.add_child(camera)
+ camera=Camera3D.new();camera.fov=62;camera.near=.16;camera.far=105;spring.add_child(camera)
+func reset_session():
+ if driving:exit_vehicle(driving.nearest_door(global_position))
+ avatar.stop_ragdoll();avatar.set_active(true);avatar.visible=true;avatar.position=Vector3.ZERO
+ external_dead=false;ragdoll_timer=0;velocity=Vector3.ZERO;health=100;stamina=1;jump_latch=false
+ collision.disabled=false;collision_layer=4;collision_mask=1|2|16
+ pivot.position=Vector3(0,1.2,0);avatar.rotation=Vector3(0,PI/2-facing,0)
 func set_look(look):
  avatar.queue_free();avatar=Avatar.new();add_child(avatar);avatar.setup(look,quality)
 func orbit(delta):
+ if delta.length_squared()>.01:last_look_time=Time.get_ticks_msec()
  camera_yaw+=delta.x*.0038;camera_pitch=clampf(camera_pitch+delta.y*.0028,-.1,.8)
 func _physics_process(delta):
  if not enabled:return
@@ -39,6 +47,7 @@ func _physics_process(delta):
  if driving:
   global_position=driving.global_position;velocity=Vector3.ZERO
   var front=driving.global_basis.x;facing=atan2(front.z,front.x)
+  if Time.get_ticks_msec()-last_look_time>1200:camera_yaw=lerp_angle(camera_yaw,facing,1-exp(-delta*2.8))
   var seat=driving.to_global(Vector3(driving.length_m*.08,.03,-driving.width_m*.19));avatar.global_position=seat;avatar.global_basis=driving.global_basis*Basis(Vector3.UP,PI/2);avatar.locomotion(0,false,false,false,true)
   pivot.position=Vector3(0,minf(2.2,driving.height_m*.65+.3),0);spring.spring_length=7.2+minf(1.7,absf(driving.speed_mps)*.04)
  elif avatar.ragdoll:

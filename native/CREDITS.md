@@ -28,7 +28,7 @@ These are **not** Mixamo assets, photogrammetry/scanned humans or a paid Pro/Sou
 
 ### Veyra modifications
 
-`tools/native-prepare-assets.py` embeds/downsamples maps to 512 px, adds original weighted garment meshes and retargets selected animations into the body skeleton. `tools/native-hair.py` bakes the CC0 hairstyles to head-local attachment space. The original modifications/tooling are MIT; the underlying Quaternius work remains CC0. Source preparation tools need NumPy/Pillow, but packaged games do not.
+`tools/native-prepare-assets.py` embeds/downsamples maps to 512 px, adds original weighted garment meshes and retargets selected animations into the body skeleton. `tools/native-hair.py` bakes the CC0 hairstyles to head-local attachment space. `tools/native-mask-covered.py` removes only inner skin faces hidden by every shipped opaque garment, offline, while preserving the full skeleton and visible anatomy. The original modifications/tooling are MIT; the underlying Quaternius work remains CC0. Source preparation tools need NumPy/Pillow, but packaged games do not.
 
 ## Vehicles
 

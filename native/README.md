@@ -1,15 +1,26 @@
-# Veyra Native — 0.4.0-alpha.2
+# Veyra Native — 0.4.1-alpha.1
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.4.0-alpha.2)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.4.1-alpha.1)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
 
-## Alpha.2 correction
+## 0.4.1 performance correction
+
+This update targets the reported Android 2–3 GB lag/flicker/crash and replaces the old HUD/control layout. See [PERFORMANCE-0.4.1.md](PERFORMANCE-0.4.1.md) for measured host results and limitations. This is not a promise that an untested physical phone now reaches a particular FPS.
+
+- One terrain surface replaces intersecting road/sidewalk/paint planes. Facade windows are filtered material detail instead of overlapping thin boxes. Original clothing is layered with clearance; always-hidden skin faces are cut offline, without Android GPU readbacks.
+- Shared meshes/materials, bounded nearest-vehicle streaming, bounded staged model warmup and staged loading. Menu startup no longer builds the whole city or a second hidden player.
+- Ragdoll bodies are built on first use; hidden animators are suspended. Leaving a session clears remote actors/vehicles and stops ragdoll simulation; capsule collision is restored on rejoin.
+- Low uses 12 nearby vehicles/two practice actors, no MSAA/shadows, and conservative Android Auto selection. A memory warning activates safe mode rather than keeping every scene alive.
+- New compact radar/vitals/driving HUD. Native per-pointer touch controls support steering, gas/brake and looking simultaneously; actual driver pedals replace the overloaded joystick-only setup.
+- Pause/menu offers a non-sensitive diagnostics copy button for follow-up device/crash investigation.
+
+## Prior alpha.2 correction
 
 Inactive physical-bone colliders are disabled until ragdoll simulation actually starts. Driver entry immediately disables the capsule and registers a vehicle/player collision exception, preventing an occupied car from receiving phantom self-collision energy. Native tests now include entering a normal spawned car, leaving it idle on its suspension and safely exiting in the complete city. The exported Windows boot test also exercises that integration path. Audio players explicitly stop/release playback resources at shutdown.
 
@@ -63,11 +74,11 @@ Android uses a joystick, independent swipe-look and on-screen actions in landsca
 
 | Preset | Initial intent | Budget |
 |---|---|---|
-| Low | 2–3 GB / older GLES3 hardware | 0.7 render scale, 30 FPS cap, no sun shadows, four practice actors, one active ragdoll budget |
-| Balanced | Around 4 GB | 0.85 scale, shadows, eight actors, three ragdolls, 60 FPS cap |
-| High | 6–8 GB+ / stronger GPU | 1.0 scale, higher range/detail, fourteen actors, six ragdolls, 60 FPS cap |
+| Low | 2–3 GB / older GLES3 hardware | 0.7 initial render scale, 30 FPS cap, no MSAA/sun shadows, 12 streamed cars, two practice actors, one ragdoll budget |
+| Balanced | Around 4 GB | 0.85 scale, shadows, 24 streamed cars, four actors, two ragdolls, 60 FPS cap |
+| High | 6–8 GB+ / stronger GPU | 1.0 scale, higher range/detail, 40 streamed cars, eight actors, three ragdolls, 60 FPS cap |
 
-Auto selects using available OS memory information and can downgrade when measured FPS stays low. **RAM does not determine GPU speed, and these are configured targets/caps, not guaranteed frame rates.** The compatibility renderer was chosen for broader GLES3 coverage. GPU drivers, OS, chipset and heat still matter. Actual 2 GB and 8 GB physical phones have not been certified by the headless test suite.
+Android Auto starts conservatively in Safe mode rather than treating RAM as GPU speed. Auto can downgrade further after sustained low FPS, with hysteresis; High is manual opt-in. **RAM does not determine GPU speed, and these are configured targets/caps, not guaranteed frame rates.** The compatibility renderer was chosen for broader GLES3 coverage. GPU drivers, OS, chipset and heat still matter. Actual 2 GB and 8 GB physical phones have not been certified by the headless test suite.
 
 ## Identity and privacy
 
@@ -95,7 +106,7 @@ python tools/native-build.py --godot /path/to/Godot --target windows
 
 For Android, install JDK 17+ and Android SDK/build tools, matching Godot Android templates, and set `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`. Signing values must be supplied privately through `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`, `GODOT_ANDROID_KEYSTORE_RELEASE_USER`, and `GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD`; **never commit them**. Then use `--target android`. Build outputs are ignored under `dist/native/`. Release tags are treated as immutable across source commits: bump the native alpha tag/version before publishing another source revision.
 
-The committed assets are sufficient for ordinary builds. To regenerate derived characters, download the official **free Standard** packs, not paid Source/Pro files, then use `tools/native-prepare-assets.py` and `tools/native-hair.py`. Provenance and original license texts are included in [CREDITS.md](CREDITS.md).
+The committed assets are sufficient for ordinary builds. To regenerate derived characters, download the official **free Standard** packs, not paid Source/Pro files, then use `tools/native-prepare-assets.py`, `tools/native-hair.py`, then `tools/native-mask-covered.py`. Provenance and original license texts are included in [CREDITS.md](CREDITS.md).
 
 ## Verification scope
 

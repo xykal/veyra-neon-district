@@ -3,7 +3,7 @@ config_version=5
 
 [application]
 config/name="Veyra: Neon District — Native Alpha"
-config/version="0.4.0-alpha.2"
+config/version="0.4.1-alpha.1"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://assets/icon.svg"
@@ -28,7 +28,7 @@ textures/default_filters/anisotropic_filtering_level=2
 textures/vram_compression/import_etc2_astc=true
 textures/vram_compression/import_s3tc_bptc=true
 lights_and_shadows/directional_shadow/size=2048
-anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/msaa_3d=0
 environment/defaults/default_clear_color=Color(0.025, 0.045, 0.075, 1)
 
 [physics]
