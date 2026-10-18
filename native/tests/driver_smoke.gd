@@ -26,7 +26,12 @@ func run():
  if point!=null:game.player.exit_vehicle(point)
  for i in range(12):await physics_frame
  check(game.player.driving==null,"exit clears driver state")
- game.return_lobby();game.queue_free()
+ game.return_lobby();game.audio_node.shutdown()
+ # Fixed-fps tests can finish hundreds of simulated frames before the real audio mixer wakes.
+ # Drain stopped playback on the actual audio thread before destroying named WAV resources.
+ OS.delay_msec(120)
+ for i in range(2):await process_frame
+ game.queue_free()
  for i in range(3):await process_frame
  for i in range(2):await physics_frame
  print("NATIVE_DRIVER_","PASS" if failed==0 else "FAIL"," failures=",failed)

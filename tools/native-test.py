@@ -4,7 +4,7 @@ import argparse,os,socket,subprocess,tempfile,time,urllib.request
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 def execute(godot,args,marker,env=None,timeout=90):
-    r=subprocess.run([str(godot),'--headless','--path',str(ROOT/'native'),*args],cwd=ROOT,env=env,capture_output=True,text=True,timeout=timeout)
+    r=subprocess.run([str(godot),'--headless','--audio-driver','Dummy','--path',str(ROOT/'native'),*args],cwd=ROOT,env=env,capture_output=True,text=True,timeout=timeout)
     text=r.stdout+r.stderr
     errors=[line for line in text.splitlines() if 'ERROR:' in line or 'SCRIPT ERROR' in line]
     print('\n'.join(line for line in text.splitlines() if 'PASS' in line or 'FAIL' in line or 'ERROR' in line or 'READY' in line))
