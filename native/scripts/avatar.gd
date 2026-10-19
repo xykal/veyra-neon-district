@@ -84,33 +84,26 @@ func _add_streetwear():
  var metal=StandardMaterial3D.new();metal.albedo_color=Color("d8c27a");metal.metallic=.8;metal.roughness=.28
  var fabric=StandardMaterial3D.new();fabric.albedo_color=COATS[look].darkened(.10);fabric.roughness=.92
  var denim=StandardMaterial3D.new();denim.albedo_color=Color("2b3a52").lerp(COATS[look],.18);denim.roughness=.88
- var attach_names={"Head":"cap","spine_03":"bag","thigh_l":"pocket_l","thigh_r":"pocket_r","calf_l":"cuff_l","calf_r":"cuff_r"}
- for bone in attach_names:
-  var id=skeleton.find_bone(bone)
-  if id<0:continue
-  var attachment=BoneAttachment3D.new();attachment.bone_name=bone;skeleton.add_child(attachment)
-  var tag=attach_names[bone]
-  if tag=="cap" and look in [0,2,5]:
-   var cap=_wear_glb("cap",attachment,Vector3(0,.175,0),fabric);wear_nodes.append(cap)
-  elif tag=="bag" and look in [1,3,5]:
-   var bag=_wear_glb("bag",attachment,Vector3(.12,-.05,.16),denim);bag.rotation_degrees=Vector3(0,0,-18);wear_nodes.append(bag)
-   var hood=_wear_glb("hood",attachment,Vector3(0,.14,-.10),fabric);wear_nodes.append(hood)
-  elif tag.begins_with("pocket") and look in [0,2,4,5]:
-   var pocket=_wear_glb("pocket",attachment,Vector3(0,.02,.075),denim);wear_nodes.append(pocket)
-  elif tag.begins_with("cuff") and look in [0,1,2,3,5]:
-   var cuff=MeshInstance3D.new();var band=CylinderMesh.new();band.top_radius=.085;band.bottom_radius=.095;band.height=.10;cuff.mesh=band;cuff.position=Vector3(0,-.08,0);cuff.material_override=denim;attachment.add_child(cuff);wear_nodes.append(cuff)
- # chest chain + jacket layer for louder looks
- if look in [2,3,4] and skeleton.find_bone("spine_03")>=0:
+ # Quaternius bone frames: spine_03 +z = punggung, -z = dada. Offsets tuned per frame
+ # so pieces sit ON the body — no floating patches, no clips through the legs.
+ if skeleton.find_bone("Head")>=0:
+  var att_h=BoneAttachment3D.new();att_h.bone_name="Head";skeleton.add_child(att_h)
+  if look in [0,2,5]:
+   var cap=_wear_glb("cap",att_h,Vector3(0,.175,0),fabric,1.0);wear_nodes.append(cap)
+ if skeleton.find_bone("spine_03")>=0:
   var att=BoneAttachment3D.new();att.bone_name="spine_03";skeleton.add_child(att)
-  var chain=_wear_glb("chain",att,Vector3(0,.12,.14),metal);wear_nodes.append(chain)
- if look in [2,5] and skeleton.find_bone("spine_03")>=0:
-  var att2=BoneAttachment3D.new();att2.bone_name="spine_03";skeleton.add_child(att2)
-  var jacket=_wear_glb("jacket",att2,Vector3(0,-.02,-.02),fabric);wear_nodes.append(jacket)
-func _wear_glb(piece,attachment,offset,material):
+  if look in [1,3,5]:
+   var bag=_wear_glb("bag",att,Vector3(0,.02,.17),denim,1.35);wear_nodes.append(bag)
+   var hood=_wear_glb("hood",att,Vector3(0,.17,.11),fabric,1.0);wear_nodes.append(hood)
+  if look in [2,3,4]:
+   var chain=_wear_glb("chain",att,Vector3(0,.155,-.13),metal,1.15);wear_nodes.append(chain)
+  if look in [2,5]:
+   var jacket=_wear_glb("jacket",att,Vector3(0,.02,-.01),fabric,1.08);wear_nodes.append(jacket)
+func _wear_glb(piece,attachment,offset,material,scale=1.0):
  var packed=load("res://assets/people/wear_"+piece+".glb")
  if packed==null:
   return MeshInstance3D.new()
- var node=packed.instantiate();attachment.add_child(node);node.position=offset
+ var node=packed.instantiate();attachment.add_child(node);node.position=offset;node.scale=Vector3.ONE*scale
  for child in _all(node):
   if child is MeshInstance3D:
    child.material_override=material
@@ -153,7 +146,8 @@ func _process(delta):
   land_time=maxf(0.0,land_time-delta)
   var land_dip=-(land_time*land_time)*.55
   model.rotation.x=lerpf(model.rotation.x,lean,1-exp(-delta*6.0))
-  model.rotation.z=lerpf(model.rotation.z,sway,1-exp(-delta*5.0))
+  var drive_bank=clampf(angular_lag*1.15,-.13,.13) if current in ["Driving","Sitting_Idle"] else 0.0
+  model.rotation.z=lerpf(model.rotation.z,sway+drive_bank,1-exp(-delta*5.0))
   model.rotation.y=lerpf(model.rotation.y,clampf(angular_lag,-.16,.16),1-exp(-delta*4.2))
   model.position.y=lerpf(model.position.y,bob+breath+land_dip,1-exp(-delta*6.5))
 func _make_ragdoll():

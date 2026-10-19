@@ -83,13 +83,23 @@ def write_steps():
 def write_vehicle():
     for name, hz in [('engine_idle', 80), ('engine_mid', 140), ('engine_high', 220)]:
         t = time(1)
-        x = sum(tone(t, hz * k) / (k ** 1.5) for k in range(1, 8)) * .17
-        env = .83 + .17 * tone(t, 10)
+        # combustion character: odd harmonics forward, sub rumble, cubic bite, 10Hz AM
+        x = sum(tone(t, hz * k) / (k ** 1.55) for k in range(1, 9)) * .16
+        x += sum(tone(t, hz * k) / (k ** 1.2) for k in (1, 3, 5)) * .07
+        x += tone(t, hz * .5) * .09 + tone(t, hz * .25) * .05
+        bite = tone(t, hz)
+        x += (bite * bite * bite - bite * .75) * .05
+        env = .82 + .18 * tone(t, 10) + .06 * tone(t, 4)
         write(name, x * env, True)
-    t = time(1.3)
+    t = time(1.5)
     rpm = 55 + 210 * np.clip(t / 1.1, 0, 1) ** .7
     x = (.22 * tone(t, rpm) + .12 * tone(t, rpm * 2) + .08 * tone(t, rpm * .5)) * (0.2 + 0.8 * np.clip(t / .9, 0, 1))
     x += .05 * lowpass(noise(t), 9) * (0.3 + 0.7 * np.clip(t / 1.0, 0, 1))
+    # starter motor whine + ignition clatter
+    sw = tone(t, 380 + 520 * np.clip(t / .55, 0, 1)) * .10 * np.clip(1 - (t - .5) / .25, 0, 1) * np.minimum(1, t * 30)
+    x += sw
+    clat = noise(t) * np.exp(-np.clip(t - .34, 0, None) * 22) * np.minimum(1, np.clip(t - .3, 0, None) * 40) * .16
+    x += lowpass(clat, 5)
     write('engine_start', x)
     t = time(.8)
     rpm = 180 * np.exp(-t * 2.4) + 55
@@ -109,8 +119,12 @@ def write_vehicle():
     write('scrape', x, True)
     t = time(.22)
     write('door', tone(t, 170) * .36 * env_exp(t, 30) + noise(t) * .17 * env_exp(t, 48))
-    t = time(.65)
-    write('horn', (.22 * tone(t, 370) + .2 * tone(t, 465)) * np.minimum(1, t * 60) * np.minimum(1, (.65 - t) * 35))
+    t = time(.62)
+    atk = np.minimum(1, t * 90) * np.minimum(1, (.62 - t) * 28)
+    vib = 1 + .004 * tone(t, 6)
+    horn = .20 * tone(t, 311 * vib) + .18 * tone(t, 370 * vib) + .07 * tone(t, 622 * vib) + .05 * tone(t, 233 * vib)
+    horn += .045 * highpass(noise(t), 9) * np.minimum(1, t * 200)
+    write('horn', horn * atk)
     t = time(2)
     f = 650 + 350 * np.sin(2 * np.pi * .5 * t)
     write('siren', np.sin(np.cumsum(f / RATE * 2 * np.pi)) * .18, True)

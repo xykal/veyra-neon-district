@@ -1,13 +1,25 @@
-# Veyra Native — 0.5.3-alpha.3
+# Veyra Native — 0.5.3-alpha.4
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.3-alpha.3)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.3-alpha.4)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
+
+## 0.5.3-alpha.4 — professional quality overhaul
+
+Full polish round — UI, models, city materials, clothing, SFX and motion:
+
+- **UI system**: hero lobby (wordmark + accent bar + section cards), mint primary actions, look chips, styled pause/GPS/chat panels, pill interact prompt, horizontal toast cards, loading screen with live percentage, Outfit type family (variable OFL font included).
+- **HUD**: glass vital card (HP/EN with icons + values), gold cash chip with icon + label, and a real speedometer — arc gauge with ticks, KM/H, gear (R/N/D) and vehicle name.
+- **City materials**: new building facade shader — structured window bays with frame reveal, per-window curtain variation, sills, floor seams, ground-floor shop band with plinth, stucco grain, flat grey roof membranes. The 319-building palette moved to an architectural scheme (glass greys for towers, warm concrete/muted brick mid-rise, light stucco low-rise) with per-building tone jitter.
+- **Vehicles**: all 20 GLBs rebuilt in Blender — sedans/suvs/taxi/police/race now share tapered greenhouses, wheel-arch cutouts, flush grilles, door handles, beltline chrome; `compact` and `race-future` were broken legacy meshes and are rebuilt proper. Richer paint (metallic/clearcoat feel) and dark glass.
+- **Clothing**: streetwear attachment overhaul — the floating knee patches, crotch-clipping hood/jacket shells and sash-look bag strap are gone. Backpack sits on the back with clean twin straps, hood behind the neck, chest chain in front, jacket shell on the chest. Quaternius bone-frame offsets corrected (+z = back).
+- **Audio**: deeper engine loops (odd-harmonic bite, sub rumble, 10 Hz AM), real starter whine + ignition clatter on engine_start, two-tone horn with vibrato and transient noise.
+- **Motion**: steering/turn bank additive while driving or seated.
 
 ## 0.5.2-alpha.3 — city color truth & lane markings
 

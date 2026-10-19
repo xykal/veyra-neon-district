@@ -37,8 +37,8 @@ def mat(name, rgba, metallic=0.0, rough=0.6):
 M_PAINT, M_GLASS, M_RUBBER, M_TRIM, M_HEAD, M_TAIL, M_DARK = 'paint','glass','rubber','trim','head','tail','dark'
 
 def setup_mats():
-    mat('paint', (0.75,0.75,0.78,1), 0.2, 0.45)
-    mat('glass', (0.05,0.08,0.10,1), 0.1, 0.12)
+    mat('paint', (0.75,0.75,0.78,1), 0.35, 0.38)
+    mat('glass', (0.045,0.075,0.095,1), 0.25, 0.07)
     mat('rubber', (0.04,0.04,0.045,1), 0.0, 0.9)
     mat('trim', (0.55,0.57,0.60,1), 0.9, 0.3)
     mat('head', (1.0,0.95,0.75,1), 0.0, 0.25)
@@ -93,6 +93,10 @@ def profile_solid(name, pts, width, material, bevel_w=0.03):
     obj.select_set(True)
     bpy.ops.object.modifier_apply(modifier=sol.name)
     obj.select_set(False)
+    # greenhouse taper: cabin narrower toward the roof (kills the 'brick on wheels' read)
+    for v in mesh.vertices:
+        t = max(0.0, min(1.0, (v.co.y-0.86)*1.5))
+        v.co.z *= 1.0-0.17*t
     finish(obj, name, material, smooth=False)
     if bevel_w: bevel(obj, bevel_w)
     return obj
@@ -178,7 +182,7 @@ def build_sedan(L, W, H, sporty=False, suv=False):
         box(f'trim_line_{sfx}', (L*0.30, 0.012, 0.02), (L*0.58, glass_y-0.30, side*(W/2+0.004)), M_DARK, 0)
     box('body_bumper_front', (0.24, 0.20, W*0.90), (L*0.025, 0.48 if not sporty else 0.38, 0), M_PAINT, 0.03)
     box('body_bumper_rear', (0.22, 0.20, W*0.90), (L*0.975, 0.50 if not sporty else 0.40, 0), M_PAINT, 0.03)
-    box('trim_grille', (0.07, 0.18, W*0.50), (L*0.012, 0.66 if not sporty else 0.52, 0), M_DARK, 0.015)
+    box('trim_grille', (0.05, 0.16, W*0.46), (L*0.028, 0.66 if not sporty else 0.52, 0), M_DARK, 0.015)
     hy = 0.78 if not suv else 0.94
     if sporty: hy = 0.58
     for side, sfx in ((-1,'l'),(1,'r')):
@@ -194,7 +198,15 @@ def build_sedan(L, W, H, sporty=False, suv=False):
         for side, sfx in ((-1,'l'),(1,'r')):
             box(f'trim_stay_{sfx}', (0.07, 0.18, 0.05), (L*0.90, 0.88, side*W*0.28), M_TRIM, 0.012)
     f_x, r_x = L*0.22, L*0.80
-    wheels(L, W, wb, min(0.32, W*0.155), f_x, r_x)
+    wr = min(0.32, W*0.155)
+    arch_cut(body, f_x, wr*1.16, W*1.2)
+    arch_cut(body, r_x, wr*1.16, W*1.2)
+    for side, sfx in ((-1,'l'),(1,'r')):
+        box(f'trim_handle_f_{sfx}', (0.15, 0.035, 0.035), (L*0.46, glass_y-0.24, side*(W/2+0.012)), M_TRIM, 0.012)
+        box(f'trim_handle_r_{sfx}', (0.15, 0.035, 0.035), (L*0.68, glass_y-0.24, side*(W/2+0.012)), M_TRIM, 0.012)
+        box(f'trim_belt_{sfx}', (L*0.46, 0.022, 0.022), (L*0.60, glass_y-0.13, side*(W/2+0.016)), M_TRIM, 0.008)
+        box(f'trim_roof_{sfx}', (L*0.26, 0.028, 0.045), (L*0.60, (1.44 if not suv else 1.72)+0.015, side*W*0.30), M_DARK, 0.012)
+    wheels(L, W, wb, wr, f_x, r_x)
 
 def build_pickup(L, W, H):
     H = max(H, 1.70)
@@ -311,6 +323,7 @@ def go(kind, L, W, H, builder, **kw):
     export(os.path.join(OUT, kind + '.glb'))
 
 go('sedan', 4.6, 2.08, 1.45, build_sedan)
+go('compact', 3.85, 1.82, 1.32, build_sedan)
 go('sport', 4.8, 2.06, 1.22, build_sedan, sporty=True)
 go('suv', 5.0, 2.14, 1.78, build_sedan, suv=True)
 go('suv-luxury', 5.3, 2.16, 1.72, build_sedan, suv=True)
@@ -324,6 +337,7 @@ go('firetruck', 6.8, 2.9, 2.85, build_box, ladder=True, lightbar_y=3.05)
 go('garbage-truck', 7.0, 3.0, 2.9, build_box, ribbed=True)
 go('delivery', 6.0, 2.7, 2.45, build_box, ribbed=False)
 go('race', 4.7, 2.02, 1.15, build_sedan, sporty=True)
+go('race-future', 4.55, 2.0, 1.06, build_sedan, sporty=True)
 go('kart-ooli', 3.0, 1.8, 0.75, build_kart)
 go('tractor', 5.4, 2.7, 2.2, build_tractor)
 go('tractor-shovel', 5.8, 3.0, 2.4, build_tractor)

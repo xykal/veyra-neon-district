@@ -106,7 +106,9 @@ def hood():
 def bag():
     box('bag_body',(0.30,0.115,0.215),(0,0,0),DENIM,bw=0.028)
     box('bag_flap',(0.30,0.02,0.115),(0,-0.062,0.055),DENIM,rot=(math.radians(12),0,0),bw=0.012)
-    box('bag_strap',(0.055,0.022,0.52),(-0.075,-0.16,0.055),DENIM,rot=(0,math.radians(-30),0),bw=0.01)
+    box('bag_strap_l',(0.05,0.02,0.16),(-0.10,0.075,0.02),DENIM,rot=(math.radians(12),0,0),bw=0.008)
+    box('bag_strap_r',(0.05,0.02,0.16),(0.10,0.075,0.02),DENIM,rot=(math.radians(12),0,0),bw=0.008)
+    box('bag_handle',(0.10,0.025,0.035),(0,0.115,0.0),DENIM,bw=0.008)
     box('bag_buckle',(0.045,0.016,0.038),(0,-0.078,0.02),METAL,bw=0.006)
 
 def pocket():
