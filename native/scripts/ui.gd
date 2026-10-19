@@ -163,9 +163,9 @@ func _chat():
  chat_log=RichTextLabel.new();chat_log.bbcode_enabled=false;chat_log.custom_minimum_size=Vector2(330,120);chat_log.scroll_following=true;chat_log.add_theme_font_size_override("normal_font_size",12);v.add_child(chat_log)
  chat_input=LineEdit.new();chat_input.max_length=200;chat_input.placeholder_text="Pesan / Enter";chat_input.text_submitted.connect(func(text):app.send_chat(text);chat_input.clear();chat_input.release_focus();chat_panel.visible=false;touch.visible=touch.enabled and not app.paused);v.add_child(chat_input);chat_panel.visible=false
 func _loading():
- loading_view=Control.new();loading_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.mouse_filter=Control.MOUSE_FILTER_STOP;root.add_child(loading_view)
+ loading_view=Control.new();loading_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.mouse_filter=Control.MOUSE_FILTER_STOP;loading_view.visible=false;root.add_child(loading_view)
  var art=TextureRect.new();art.texture=load("res://assets/boot_splash.png");art.expand_mode=TextureRect.EXPAND_IGNORE_SIZE;art.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_COVERED;art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.add_child(art)
- var shade=ColorRect.new();shade.color=Color(2,6,11,.62);shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.add_child(shade)
+ var shade=ColorRect.new();shade.color=Color("02060b9e");shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.add_child(shade)
  var stack=VBoxContainer.new();stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);stack.alignment=BoxContainer.ALIGNMENT_CENTER;stack.add_theme_constant_override("separation",14);loading_view.add_child(stack)
  var t1=_label(stack,"VEYRA",58,Color("eef5e8"));t1.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
  var t2=_label(stack,"N E O N   D I S T R I C T",13,Color("6fe0b8"));t2.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
@@ -173,7 +173,7 @@ func _loading():
  var bar_wrap=VBoxContainer.new();bar_wrap.custom_minimum_size=Vector2(420,0);bar_wrap.size_flags_horizontal=Control.SIZE_SHRINK_CENTER;stack.add_child(bar_wrap)
  loading_bar=ProgressBar.new();loading_bar.max_value=1;loading_bar.show_percentage=false;loading_bar.custom_minimum_size=Vector2(420,8)
  var fill=StyleBoxFlat.new();fill.bg_color=Color("6fe0b8");fill.set_corner_radius_all(4);loading_bar.add_theme_stylebox_override("fill",fill)
- var bg=StyleBoxFlat.new();bg.bg_color=Color(9,20,28,.85);bg.set_corner_radius_all(4);loading_bar.add_theme_stylebox_override("background",bg);bar_wrap.add_child(loading_bar)
+ var bg=StyleBoxFlat.new();bg.bg_color=Color("09141cd9");bg.set_corner_radius_all(4);loading_bar.add_theme_stylebox_override("background",bg);bar_wrap.add_child(loading_bar)
  var tip=_label(stack,"Tips: tekan F buat masuk kendaraan, G buat GPS.",10,Color("9fc4bd"));tip.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 func set_loading(value,progress,text):
  busy=value;loading_view.visible=value;loading_bar.value=progress;loading_label.text=text
