@@ -65,6 +65,8 @@ var network_vehicle_pending={}
 var network_me={}
 var memory_warnings=0
 var load_stage="boot"
+var boot_crumb="init";var boot_lines=PackedStringArray();var boot_first_frame=false
+var load_last_change_ms=0;var diag_label:Label
 var startup_to_menu_ms=0.0
 var diag_clock=0.0
 var low_fps_time=0.0
@@ -72,8 +74,16 @@ var adaptive_scale=.7
 var preview_yaw=0.0
 var preview_idle=0.0
 
+func _crumb(text):
+ boot_crumb=text;load_last_change_ms=Time.get_ticks_msec()
+ boot_lines.append(str(load_last_change_ms)+"ms "+text)
+ var f=FileAccess.open("user://boot.log",FileAccess.WRITE)
+ if f:f.store_string("\n".join(boot_lines));f.close()
 func _ready():
  boot_time=Time.get_ticks_msec()/1000.0
+ var diag_layer=CanvasLayer.new();diag_layer.layer=99;add_child(diag_layer)
+ diag_label=Label.new();diag_label.position=Vector2(8,8);diag_label.add_theme_font_size_override("font_size",11);diag_label.modulate=Color(1,1,1,.5);diag_layer.add_child(diag_label)
+ _crumb("ready:start")
  if FileAccess.file_exists("user://diagnostics.json"):
   var old=FileAccess.open("user://diagnostics.json",FileAccess.READ)
   if old and old.get_length()<32768:
@@ -81,13 +91,12 @@ func _ready():
    if value is Dictionary:
     for k in ["version","stage","fps","static_memory_mb","video_memory_mb","memory_warnings","vehicles","quality"]:
      if value.has(k):previous_session[k]=value[k]
- prefs=Preferences.new();quality=prefs.tier();quality_spec=Preferences.PRESETS[quality]
+ prefs=Preferences.new();quality=prefs.tier();quality_spec=Preferences.PRESETS[quality];_crumb("ready:prefs tier="+str(quality))
  audio_node=Sound.new();add_child(audio_node);audio_node.set_volume(float(prefs.data.master))
- world=District.new();add_child(world);world.prepare(quality);world.visible=false;world.environment.environment.background_mode=Environment.BG_COLOR;world.environment.environment.background_color=Color("07111e");world.environment.environment.fog_enabled=false
+ world=District.new();add_child(world);_crumb("ready:world-prepare");world.prepare(quality);_crumb("ready:world-ok");world.visible=false;world.environment.environment.background_mode=Environment.BG_COLOR;world.environment.environment.background_color=Color("07111e");world.environment.environment.fog_enabled=false
  effects=FX.new();add_child(effects)
  network=Net.new();add_child(network);network.setup(prefs);network.packet.connect(_packet);network.status_changed.connect(_network_status)
- _preview()
- ui=UI.new();add_child(ui);ui.setup(self)
+ _crumb("ready:preview");_preview();_crumb("ready:ui");ui=UI.new();add_child(ui);ui.setup(self);_crumb("ready:menu-ready")
  set_quality(int(prefs.data.quality),false);get_viewport().scaling_3d_scale=.85
  for record in world.data.cars:vehicle_records[int(record.id)]=record
  startup_to_menu_ms=Time.get_ticks_msec()-int(boot_time*1000);_record_diagnostics("menu-ready")
@@ -99,7 +108,7 @@ func _ready():
  elif "--online-test" in OS.get_cmdline_user_args():call_deferred("_online_test")
  elif demo_capture:call_deferred("start_game",false)
  if capture_path!="":call_deferred("_capture")
- print("VEYRA_NATIVE_READY version=0.5.3-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/39-sfx/lombok-shell; world=",world.data.seed)
+ print("VEYRA_NATIVE_READY version=0.5.3-alpha.2 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/39-sfx/lombok-shell; world=",world.data.seed)
 func _preview():
  preview=Citizen.new();add_child(preview);preview.position=Vector3(-40,0,-40);preview.rotation.y=preview_yaw;preview.setup(int(prefs.data.look),quality)
  pedestal=MeshInstance3D.new();var disk=CylinderMesh.new();disk.top_radius=2.2;disk.bottom_radius=2.3;disk.height=.12;disk.radial_segments=48;pedestal.mesh=disk;var mat=StandardMaterial3D.new();mat.albedo_color=Color("1b3e46");mat.roughness=.55;mat.metallic=.25;pedestal.material_override=mat;pedestal.position=preview.position-Vector3.UP*.07;add_child(pedestal)
@@ -134,6 +143,7 @@ func _ensure_player():
  player=Pawn.new();add_child(player);player.setup(int(prefs.data.look),quality,audio_node);player.enabled=false;player.visible=false;player.camera.far=float(quality_spec.distance)+25
 func _loading_progress(value,text):
  if not loading:return
+ if text!=load_stage:_crumb("stage:"+text)
  load_stage=text
  if Time.get_ticks_msec()-last_diagnostic_write>500:last_diagnostic_write=Time.get_ticks_msec();_record_diagnostics(text)
  if ui:ui.set_loading(true,value,text)
@@ -189,11 +199,12 @@ func _populate():
   await get_tree().process_frame
 func start_game(use_online):
  if playing or loading:return
- loading=true;session_generation+=1;Engine.max_fps=60;prefs.data.nickname=ui.name_input.text.strip_edges().left(16)
- if prefs.data.nickname=="":prefs.data.nickname="Warga"
- prefs.save();online=use_online;paused=false;_loading_progress(.01,"Memuat distrik")
- preview.visible=false;preview.set_active(false)
  call_deferred("_boot_watchdog")
+ loading=true;session_generation+=1;Engine.max_fps=60;load_last_change_ms=Time.get_ticks_msec()
+ if ui and ui.name_input:prefs.data.nickname=ui.name_input.text.strip_edges().left(16)
+ if prefs.data.nickname=="":prefs.data.nickname="Warga"
+ prefs.save();online=use_online;paused=false;_crumb("start_game online="+str(use_online));_loading_progress(.01,"Memuat distrik")
+ preview.visible=false;preview.set_active(false)
  await world.build_async(quality,func(v,t):_loading_progress(v*.68,t))
  _loading_progress(.7,"Menyiapkan karakter")
  _ensure_player();await get_tree().process_frame
@@ -201,11 +212,13 @@ func start_game(use_online):
  _finish_boot(false)
 func _finish_boot(recovered):
  if playing and not loading:return
+ _crumb("finish_boot recovered="+str(recovered))
  loading=false;playing=true;Engine.max_fps=int(quality_spec.fps)
+ ui.set_loading(false,1,"Siap");ui.show_game()
  if world:
   world.visible=true
   if world.environment and world.environment.environment:
-   world.environment.environment.background_mode=Environment.BG_SKY;world.environment.environment.fog_enabled=true
+   world.environment.environment.background_mode=Environment.BG_SKY;world.environment.environment.fog_enabled=quality>0
  get_viewport().scaling_3d_scale=adaptive_scale
  if pedestal:pedestal.visible=false
  if player:
@@ -220,7 +233,6 @@ func _finish_boot(recovered):
  money=0
  for c in vehicles.values():c.networked=online;c.freeze=true;c.driver=0
  for n in npcs:n.body.visible=not online;n.shape.disabled=online;n.avatar.set_active(not online)
- ui.set_loading(false,1,"Siap");ui.show_game()
  Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if ui.touch.enabled else Input.MOUSE_MODE_CAPTURED
  if audio_node:
   audio_node.set_ambient(player.global_position if player else Vector3.ZERO,"coast")
@@ -273,6 +285,10 @@ func _unhandled_input(event):
    if Input.mouse_mode!=Input.MOUSE_MODE_CAPTURED:Input.mouse_mode=Input.MOUSE_MODE_CAPTURED
   if event.button_index==MOUSE_BUTTON_WHEEL_UP and event.pressed:player.spring.spring_length=maxf(2,player.spring.spring_length-.25)
 func _process(delta):
+ if loading and Time.get_ticks_msec()-load_last_change_ms>9000:
+  push_warning("boot watchdog(process) force finish at "+str(load_stage));_finish_boot(true)
+ if playing and not boot_first_frame:boot_first_frame=true;_crumb("first-playable-frame")
+ if diag_label:diag_label.text="VEYRA "+str(int(Time.get_ticks_msec()/1000.0))+"s | "+boot_crumb+" | L"+str(int(loading))+" P"+str(int(playing))+" Q"+str(quality)
  if not playing:
   if preview and not loading:
    preview_idle+=delta
@@ -559,7 +575,7 @@ func _check(value,label):
  if not value:native_failures+=1;push_error("NATIVE_ASSERT_FAILED "+label)
 
 func diagnostic_data():
- return {"app":"Veyra","version":"0.5.3-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
+ return {"app":"Veyra","version":"0.5.3-alpha.2","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
 func _record_diagnostics(stage):
  load_stage=stage
  var file=FileAccess.open("user://diagnostics.json",FileAccess.WRITE)
