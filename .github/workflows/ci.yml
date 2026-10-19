@@ -1,3 +1,7 @@
+# Security: workflows only run for the repository owner (xykal) or explicitly listed
+# trusted actors below. Fork pull requests, outside collaborators and anonymous
+# workflow_dispatch callers cannot trigger builds, secrets or publishes.
+# To grant another trusted actor, add it to each job's `if:` allowlist.
 name: Test · Build · Publish
 on:
   push:
@@ -9,18 +13,21 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}-xykal
   cancel-in-progress: true
 jobs:
   quality:
     name: Unit + build (Node ${{ matrix.node }})
+    if: github.actor == 'xykal'
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node: [22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -28,7 +35,7 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.0
         if: matrix.node == 24
         with:
           name: veyra-runtime
@@ -36,17 +43,20 @@ jobs:
           retention-days: 14
   browser:
     name: Desktop · Mobile · Voice
+    if: github.actor == 'xykal'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.0
         if: always()
         with:
           name: browser-results
@@ -56,12 +66,15 @@ jobs:
           retention-days: 7
   cloudflare:
     name: Cloudflare · workerd · Mobile · Voice
+    if: github.actor == 'xykal'
     runs-on: ubuntu-latest
     env:
       WRANGLER_SEND_METRICS: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
@@ -70,7 +83,7 @@ jobs:
       - run: npm run test:cloudflare
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e:cloudflare
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.0
         if: always()
         with:
           name: cloudflare-results
@@ -82,21 +95,23 @@ jobs:
   container:
     name: Docker → GHCR
     needs: [quality, browser, cloudflare]
-    if: github.event_name != 'pull_request'
+    if: github.actor == 'xykal' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.0.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.5.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v5
+      - uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.5.1
         id: meta
         with:
           images: ghcr.io/xykal/veyra-neon-district
@@ -104,7 +119,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=sha-
             type=ref,event=tag
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.9.0
         id: build
         with:
           context: .
@@ -128,14 +143,16 @@ jobs:
   cloudflare-deploy:
     name: Deploy → Cloudflare
     needs: [quality, browser, cloudflare]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CLOUDFLARE_DEPLOY_ENABLED == 'true'
+    if: github.actor == 'xykal' && github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CLOUDFLARE_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: cloudflare-production
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
