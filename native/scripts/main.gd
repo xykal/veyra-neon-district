@@ -99,7 +99,7 @@ func _ready():
  elif "--online-test" in OS.get_cmdline_user_args():call_deferred("_online_test")
  elif demo_capture:call_deferred("start_game",false)
  if capture_path!="":call_deferred("_capture")
- print("VEYRA_NATIVE_READY version=0.5.2-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/38-sfx/lombok-shell; world=",world.data.seed)
+ print("VEYRA_NATIVE_READY version=0.5.3-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/39-sfx/lombok-shell; world=",world.data.seed)
 func _preview():
  preview=Citizen.new();add_child(preview);preview.position=Vector3(-40,0,-40);preview.rotation.y=preview_yaw;preview.setup(int(prefs.data.look),quality)
  pedestal=MeshInstance3D.new();var disk=CylinderMesh.new();disk.top_radius=2.2;disk.bottom_radius=2.3;disk.height=.12;disk.radial_segments=48;pedestal.mesh=disk;var mat=StandardMaterial3D.new();mat.albedo_color=Color("1b3e46");mat.roughness=.55;mat.metallic=.25;pedestal.material_override=mat;pedestal.position=preview.position-Vector3.UP*.07;add_child(pedestal)
@@ -133,12 +133,16 @@ func _ensure_player():
  if player:return
  player=Pawn.new();add_child(player);player.setup(int(prefs.data.look),quality,audio_node);player.enabled=false;player.visible=false;player.camera.far=float(quality_spec.distance)+25
 func _loading_progress(value,text):
+ if not loading:return
  load_stage=text
  if Time.get_ticks_msec()-last_diagnostic_write>500:last_diagnostic_write=Time.get_ticks_msec();_record_diagnostics(text)
  if ui:ui.set_loading(true,value,text)
 func _load_vehicle(record,generation=-1):
  if generation>=0 and generation!=session_generation:return null
  var c=Car.new();add_child(c);c.configure(record,world.data.types,quality,audio_node);c.networked=online;c.freeze=true;c.set_meta("last_used",Time.get_ticks_msec())
+ var q=PhysicsRayQueryParameters3D.create(c.global_position+Vector3(0,40,0),c.global_position+Vector3(0,-80,0),3,[c.get_rid()])
+ var g=get_world_3d().direct_space_state.intersect_ray(q)
+ if not g.is_empty():c.global_position.y=float(g.position.y)+0.05
  if vehicle_runtime.has(int(record.id)):
   var state=vehicle_runtime[int(record.id)];c.global_transform=state.transform;c.hp=state.hp
  vehicles[int(record.id)]=c
@@ -189,22 +193,53 @@ func start_game(use_online):
  if prefs.data.nickname=="":prefs.data.nickname="Warga"
  prefs.save();online=use_online;paused=false;_loading_progress(.01,"Memuat distrik")
  preview.visible=false;preview.set_active(false)
+ call_deferred("_boot_watchdog")
  await world.build_async(quality,func(v,t):_loading_progress(v*.68,t))
  _loading_progress(.7,"Menyiapkan karakter")
  _ensure_player();await get_tree().process_frame
  await _populate()
- world.visible=true;world.environment.environment.background_mode=Environment.BG_SKY;world.environment.environment.fog_enabled=true;get_viewport().scaling_3d_scale=adaptive_scale;pedestal.visible=false;player.visible=true
- player.enabled=true;player.online=online;player.global_position=Vector3(world.data.spawn.x/10.0,.05,world.data.spawn.y/10.0);player.facing=float(world.data.spawn.a);player.camera_yaw=player.facing;player.camera.current=true;menu_camera.current=false
- player.reset_session();money=0
+ _finish_boot(false)
+func _finish_boot(recovered):
+ if playing and not loading:return
+ loading=false;playing=true;Engine.max_fps=int(quality_spec.fps)
+ if world:
+  world.visible=true
+  if world.environment and world.environment.environment:
+   world.environment.environment.background_mode=Environment.BG_SKY;world.environment.environment.fog_enabled=true
+ get_viewport().scaling_3d_scale=adaptive_scale
+ if pedestal:pedestal.visible=false
+ if player:
+  player.visible=true;player.enabled=true;player.online=online
+  var spawn_xz=Vector3(world.data.spawn.x/10.0,.05,world.data.spawn.y/10.0)
+  var snap=get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(spawn_xz+Vector3(0,40,0),spawn_xz+Vector3(0,-80,0)))
+  player.global_position=spawn_xz+Vector3(0,0.12,0) if snap.is_empty() else Vector3(spawn_xz.x,float(snap.position.y)+0.12,spawn_xz.z)
+  player.facing=float(world.data.spawn.a);player.camera_yaw=player.facing
+  if player.camera:player.camera.current=true
+  player.reset_session()
+ if menu_camera:menu_camera.current=false
+ money=0
  for c in vehicles.values():c.networked=online;c.freeze=true;c.driver=0
  for n in npcs:n.body.visible=not online;n.shape.disabled=online;n.avatar.set_active(not online)
- _loading_progress(.98,"Menuntaskan frame pertama")
- await get_tree().process_frame
- loading=false;playing=true;Engine.max_fps=int(quality_spec.fps);ui.set_loading(false,1,"Siap");ui.show_game();Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if ui.touch.enabled else Input.MOUSE_MODE_CAPTURED
- audio_node.set_ambient(player.global_position,"coast")
+ ui.set_loading(false,1,"Siap");ui.show_game()
+ Input.mouse_mode=Input.MOUSE_MODE_VISIBLE if ui.touch.enabled else Input.MOUSE_MODE_CAPTURED
+ if audio_node:
+  audio_node.set_ambient(player.global_position if player else Vector3.ZERO,"coast")
+  audio_node.play_ui("welcome_pa",-4.0)
  if online:network.join();ui.notify("Online · shared server")
- else:ui.notify("Distrik siap. Dekati pintu mobil untuk masuk.")
+ elif recovered:ui.notify("Pemuatan dipulihkan · sebagian dunia mungkin belum siap.")
+ else:ui.notify("Selamat datang di Veyra. Anda mendarat di Bandara Internasional Veyra.")
  job_point=Vector3(world.data.map.pois[0].x/10.0,0,world.data.map.pois[0].y/10.0);_record_diagnostics("playing")
+
+func _boot_watchdog():
+ var gen=session_generation;var last=load_stage;var last_t=Time.get_ticks_msec()
+ while loading and gen==session_generation:
+  await get_tree().create_timer(1.0).timeout
+  if not loading or gen!=session_generation:return
+  if load_stage!=last:last=load_stage;last_t=Time.get_ticks_msec()
+  elif Time.get_ticks_msec()-last_t>12000:
+   push_warning("boot watchdog: forcing finish after stall at "+str(load_stage))
+   _finish_boot(true);return
+
 func return_lobby():
  session_generation+=1;loading=false
  if player:
@@ -389,7 +424,9 @@ func _free_point(point):
  var state=get_world_3d().direct_space_state
  for radius in [0.0,1.5,3.0,5.0]:
   for i in range(8):
-   var p=point+Vector3(cos(i*TAU/8)*radius,0,sin(i*TAU/8)*radius);p.y=.06
+   var p=point+Vector3(cos(i*TAU/8)*radius,0,sin(i*TAU/8)*radius)
+   var g=state.intersect_ray(PhysicsRayQueryParameters3D.create(p+Vector3(0,40,0),p+Vector3(0,-80,0)))
+   p.y=float(g.position.y)+.06 if not g.is_empty() else .06
    var shape=CapsuleShape3D.new();shape.radius=.42;shape.height=1.8;var q=PhysicsShapeQueryParameters3D.new();q.shape=shape;q.transform=Transform3D(Basis.IDENTITY,p+Vector3.UP*.92);q.collision_mask=1|2
    if state.intersect_shape(q,1).is_empty():return p
  return null
@@ -493,8 +530,9 @@ func _smoke_test():
  candidate=_candidate();_check(candidate!=null,"normal spawn vehicle access")
  if candidate:
   var car=candidate;interact();_check(player.driving==car,"driver assignment")
+  var car_y0=car.global_position.y
   for i in range(120):await get_tree().physics_frame
-  _check(car.global_position.y>-.2 and car.global_position.y<1.5,"occupied vehicle grounded")
+  _check(car.global_position.y>car_y0-.25 and car.global_position.y<car_y0+1.5,"occupied vehicle grounded")
   _check(car.linear_velocity.length()<3,"driver entry cannot launch vehicle")
   var point=car.safe_exit(player);_check(point!=null,"safe driver exit")
   if point!=null:player.exit_vehicle(point)
@@ -521,7 +559,7 @@ func _check(value,label):
  if not value:native_failures+=1;push_error("NATIVE_ASSERT_FAILED "+label)
 
 func diagnostic_data():
- return {"app":"Veyra Native","version":"0.5.2-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
+ return {"app":"Veyra","version":"0.5.3-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
 func _record_diagnostics(stage):
  load_stage=stage
  var file=FileAccess.open("user://diagnostics.json",FileAccess.WRITE)

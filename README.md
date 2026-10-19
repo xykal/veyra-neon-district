@@ -1,52 +1,50 @@
-# Veyra: Neon District
+# Veyra
 
-[![Test · Build · Publish](https://github.com/xykal/veyra-neon-district/actions/workflows/ci.yml/badge.svg)](https://github.com/xykal/veyra-neon-district/actions/workflows/ci.yml)
+**Multiplayer roleplay in a living island city.** One shared world — streets, harbor, rice terraces, volcano, and an international airport where every new story begins.
 
-**Satu kota. Banyak cerita. Giliran lo bikin jejak.**
+[![Test · Build · Publish](https://github.com/xykal/veyra-neon-district/actions/workflows/ci.yml/badge.svg)](https://github.com/xykal/veyra-neon-district/actions/workflows/ci.yml) [![Native Build](https://github.com/xykal/veyra-neon-district/actions/workflows/native.yml/badge.svg)](https://github.com/xykal/veyra-neon-district/actions/workflows/native.yml)
 
-**Play:** [https://veyra-neon-district.dikanjut.workers.dev](https://veyra-neon-district.dikanjut.workers.dev) · deployment and health checks run through GitHub Actions.
+**Play in browser:** [veyra-neon-district.dikanjut.workers.dev](https://veyra-neon-district.dikanjut.workers.dev) · **Download native alpha:** [Releases](https://github.com/xykal/veyra-neon-district/releases)
 
-Independent browser-based **3D third-person multiplayer city sandbox**, inspired by the freedom of classic multiplayer city games. Built with locally vendored Three.js and a shared authoritative backend for **Node/Docker or Cloudflare Workers + Durable Objects**. Desktop keyboard/mouse and mobile touch controls. No GTA / Rockstar / SA-MP game assets.
+| | | |
+|---|---|---|
+| ![Welcome to Veyra](native/screenshots/welcome.png) | ![Street life](native/screenshots/street.png) | ![Airport](native/screenshots/airport.png) |
+| *Spawn: Bandara Internasional Veyra, complete with a terminal PA welcome* | *Street life — custom avatars, parked cars, palms and city blocks* | *Runway, apron, control tower and parked aircraft on the south coast* |
 
-> **Alpha 0.3.0**, not a finished MMO. Real 3D rendering with a planar authoritative simulation; no jumping, interiors, vertical vehicle physics or account-login system yet. Performance depends on GPU, browser, heat and network—not a promise of 60 FPS on every device.
+| | |
+|---|---|
+| ![Island hero](native/screenshots/hero.png) | ![Runway approach](native/screenshots/runway.png) |
+| *Lombok-inspired island: Mt. Rinjani behind the neon city* | *Runway 27 threshold — markings, edge lights, approach over the bay* |
 
-![Veyra gameplay](docs/veyra-play.png)
+## What Veyra is
 
-## 0.3 — controller, collision and Identity Studio
+An independent **third-person 3D multiplayer city sandbox** in the spirit of classic multiplayer city mods — but fully original: no GTA / Rockstar / SA-MP assets. Two clients, one world:
 
-See [the 0.3 change notes](docs/STUDIO-0.3.md) for controls, cosmetic persistence, physics changes and limits.
+- **Veyra Native (Godot 4.7.2)** — the flagship. Real 3D client for **Windows and Android**, artist-authored characters and vehicles, native physics and sound. Current: **0.5.3-alpha.1**.
+- **Veyra Web 0.3.0** — the original browser game (Three.js + authoritative Node/Workers backend), with `/2d/` lite fallback. Same server, same progression.
 
-- **Identity Studio:** six original GPU-skinned body presets, 8 hairstyles, 5 tops, 4 bottoms, 4 footwear styles, skin/hair/clothes palettes and accessories. Three device-local saved looks; the active appearance is validated, replicated and saved with server progression. Open **K** / Settings → Studio while on foot to change it without resetting money.
-- A stable third-person orbit camera, movement-facing avatar, holstered idle weapon and explicit RMB aim. Moving the unlocked cursor no longer spins the camera. Initial canvas click captures camera control rather than shooting backwards.
-- **60 Hz fixed simulation**, shared acceleration/braking and bounded local prediction/reconciliation. Full-length oriented vehicle bodies, swept movement, player/vehicle/prop collisions, safe door exits and consistent model/collider dimensions.
-- **F / NAIK** now uses the same eligible-vehicle selection on client/server, excludes moving/occupied traffic before ranking, checks walls and shows a reason when an interaction is blocked. Spawns offer a reachable parked vehicle.
-- Versioned browser module URLs prevent a normal refresh from combining cached 0.2 controllers with 0.3 meshes/physics.
+> Alpha software. Performance depends on your GPU, RAM, heat and network — we measure and report limits honestly instead of promising 60 FPS everywhere.
 
-## Native Windows / Android alpha
+## Veyra Native — 0.5.3-alpha.1
 
-A separate **real Godot native client**, not a WebView, is being shipped alongside this web version. The native branch of the project is **0.5.2-alpha.1**; the web runtime remains 0.3.0.
+- **True third-person 3D** — 65-bone skinned characters, 20 imported animation clips, emotes, jump/land, hit reactions, Jolt physical ragdolls.
+- **Bandara Internasional Veyra** — new south-coast airport: 340 m runway with piano keys, centerline and edge lights, apron, terminal, control tower, parked aircraft, windsock and fuel farm. You spawn on the apron and get a **female terminal-PA welcome voice-over** (synthesized, with authentic band-limited PA echo).
+- **18 vehicle classes** — sedan, sport, police, taxi, motorbike, tractor, ambulance, firetruck, garbage truck, delivery, SUV, luxury SUV, supercar, kart, shovel, pickup, van, city bus — Blender-authored meshes with round wheels, hub-true spin, glass/taillight/trim routing, suspension, drift and damage.
+- **Lombok-inspired island** — Mt. Rinjani, rice terraces, beaches, harbor, warung, docks, villages and a dense neon city on a 60 m street grid with painted lane dashes and crosswalks.
+- **Lobby & identity** — 360° character podium, vault of saved looks, Identity Studio clothing (streetwear, baggy fits), custom boot/loading splash (no engine logo).
+- **Complete audio set** — 39 synthesized SFX: engines, skids, doors, horns, sirens, footsteps per surface, cloth, wind, rain, thunder, ocean, birds and UI.
+- **Anti-stuck boot** — a boot watchdog recovers loading automatically (12 s stall → force-finish + toast), and a mobile-safe shader audit (no reserved GLSL words) removes a class of silent GPU compile failures.
+- **Quality tiers** — Safe 12 vehicles / 2 NPCs, Balanced 24 / 4 / 2× MSAA, High 40 / 8 / 4× MSAA + distant terrain. Tuned for 2–3 GB Android devices, with headroom tiers for 6–8 GB+.
 
-- [Native project, controls, downloads and feature-parity limits](native/README.md)
-- [Native Windows/Android build workflow](https://github.com/xykal/veyra-neon-district/actions/workflows/native.yml)
-- [Native alpha downloads](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.2-alpha.3)
+Measured on the software renderer used for CI captures (llvmpipe, not a phone), 0.5.2 baseline: ~38 ms/frame, 167 draw calls, 23.5 k primitives at Balanced (0.5.3 adds the airport on top of this). Treat it as a regression baseline, not a device benchmark. Test suite: avatar 48 · physics 25 · driver · touch 64 · performance 71 · app 11 · network 6 — all green in CI.
 
-The native client adds artist-authored humanoids, imported animation clips, physical Jolt ragdolls, native spatial sound and offline 6-DOF vehicle simulation. **Online still uses the existing authoritative planar server adapter; voice/full wardrobe and several web systems are not complete native parity.** See the native guide rather than assuming an APK automatically equals GTA/FiveM realism or universal device performance.
+## Veyra Web 0.3.0
 
-## Main features
+The original browser client still runs and shares the backend: server-owned movement, shooting with wall occlusion, wanted/police AI, delivery jobs, chat, scoreboard, GPS (22 POIs), proximity voice (opt-in WebRTC), day/night, weather, Identity Studio persistence, District Legends leaderboard and a 2D Lite fallback. Full feature notes in the [0.3 change log](docs/STUDIO-0.3.md) and [native guide](native/README.md).
 
-- Third-person camera, animated humanoids, day/night, weather, building windows/neon, street furniture, pedestrians and wall fade.
-- **18 vehicle classes:** sedan, sport, pickup, police, taxi, motorbike, tractor, ambulance, firetruck, garbage truck, delivery, SUV, luxury SUV, supercar, kart, shovel, van and original city bus. 17 GLB templates + procedural motorbike; shared driving model with braking, slip, handbrake, collision damage and suspension visuals.
-- Server-owned movement, shooting, health, money, wanted/police pursuit, vehicle occupancy, delivery rewards and chat.
-- **Saved progress:** wallet, kills/deaths, completed jobs, distance, play time and best speed. Node uses atomic JSON writes every 10 seconds; Cloudflare uses private SQLite, saves every 30 seconds and flushes on join/disconnect. Resume identity stays in this browser; the server stores only its SHA-256 hash. Names are display names, not authenticated accounts.
-- **District Legends:** deduplicated saved/live top 25. Score = money + 100 × kills + 50 × jobs.
-- **GPS:** 22 searchable destinations, keyword synonyms, road-following obstacle-free routes, 3D marker + minimap line. Named POIs are navigation locations, not functioning banks/shops/interiors.
-- **Opt-in proximity voice:** WebRTC mesh, max 8 opted-in microphones, push-to-talk V/VOX, distance volume. No audio recording. HTTPS + mic permission required; STUN alone cannot traverse every NAT—production needs a suitable TURN service.
-- Touch joystick, automatic sprint at full joystick travel, swipe look, held fire/brake/VOX, action/horn/chat/GPS/leaderboard/settings buttons. Portrait + landscape layouts and safe-area support.
-- Low / balanced / high presets; auto FPS-based downgrade, adaptive render scale, instancing, nearby entity culling, reduced NPC/particle/shadow cost. **2D Lite fallback** when WebGL is unavailable.
+## Run locally (web)
 
-## Run locally
-
-Use **Node.js 22 or 24** (24 is used by the Docker runtime).
+Node.js 22 or 24:
 
 ```sh
 git clone https://github.com/xykal/veyra-neon-district.git
@@ -54,133 +52,21 @@ cd veyra-neon-district
 npm start
 ```
 
-Open **http://localhost:3000**. The runtime has **zero npm production dependencies**, so `npm install` is not needed just to play. Devices on the same LAN can open `http://YOUR-PC-IP:3000` if your firewall allows it. Voice requires HTTPS except browser-trusted localhost.
+Open **http://localhost:3000** — zero production npm dependencies. `/` is the 3D game, `/2d/` the lite client. Devices on your LAN can join via your PC's IP.
 
-- `/` — 3D game
-- `/2d/` — lighter 2D client, same server/progress
-- `/?offline=1` or **Coba offline** — local simulation after page/assets load; not an installable offline-cache guarantee
-- `/healthz` — deployment health check
-- `/api/leaderboard` — public score rows, without profile secrets
+## Native builds
 
-No user API key is required. `.env.example` describes optional environment variables; the server reads process environment, not an automatic dotenv loader.
+Every push builds Windows (.exe) and Android (arm64 / armv7) artifacts via [GitHub Actions](https://github.com/xykal/veyra-neon-district/actions/workflows/native.yml), tagged from `native/project.godot` and published to [Releases](https://github.com/xykal/veyra-neon-district/releases). To build locally you need Godot 4.7.2 + export templates; CI is the supported path. The native client also runs against the same multiplayer server (planar authoritative adapter — full 3D native multiplayer is on the roadmap).
 
-```sh
-PORT=3000 DATA_DIR=./data MAX_PLAYERS=32 npm start
-```
+## Limits, honestly
 
-## Controls
+- Alpha: no interiors, no account login, no player trading/economy. Named POIs are navigation targets, not functional banks/shops.
+- Native online play uses the planar authoritative server; vehicles and shooting are not yet full 3D-authoritative.
+- No performance guarantee for all hardware. Phones with 2 GB RAM run the Safe tier; heat and GPU drivers matter.
+- Web proximity voice needs HTTPS + a TURN server beyond localhost.
 
-| Desktop | Action |
-|---|---|
-| WASD / arrows | Walk; throttle/reverse/steer while driving |
-| Shift | Sprint |
-| F | Enter / exit nearby stopped vehicle |
-| Space | Handbrake |
-| Mouse / drag; click | Orbit camera / capture pointer; subsequent LMB fires (hold to repeat) |
-| RMB | Aim; release to holster after firing finishes |
-| K | Character / outfit studio while on foot |
-| T; Enter | Open / send chat |
-| Tab | Online players |
-| G | GPS / destination search |
-| L | District Legends |
-| V (hold) | Opt in to mic, push-to-talk |
-| H | Horn |
-| P | Graphics / mic / fullscreen settings |
-| Esc | Release pointer / close panels |
+## Credits & license
 
-On mobile, use the left joystick and swipe on the right. **FIRE / NAIK / TURUN / REM / HORN** are on screen; the top row contains CHAT / GPS / SKOR / VOX / settings. Close buttons work without a keyboard. Rotate to landscape for more road visibility.
+Code and synthesized audio: **MIT**. Godot Engine: MIT. Quaternius human models/animations: **CC0**. Kenney car kit: **CC0**. Original assets only — no Rockstar/SA-MP content.
 
-## Hosting / deployment
-
-**This is not a static-only site.** Choose the Cloudflare adapter with one stateful Durable Object, or one long-running Node/Docker instance with HTTP + WebSocket and persistent storage. A plain static-site upload does not run the multiplayer world.
-
-**Recommended: [Cloudflare Workers + Durable Objects](docs/CLOUDFLARE.md).** `wrangler.jsonc` includes same-origin static assets, a single city, native WebSockets and SQLite progression. Default 16 slots; simulation stops when empty. It works with SQLite-backed objects on the Free plan, subject to daily quotas—not unlimited free hosting.
-
-```sh
-npm ci --ignore-scripts
-npm run dev:cloudflare       # real local Workers runtime + local SQLite
-npm run build:cloudflare     # dry-run bundle, no cloud credentials needed
-npm run deploy:cloudflare    # requires private Cloudflare deployment credentials
-```
-
-**Existing Node/Docker alternatives remain supported:**
-
-1. **Render Web Service**, build from this repository's Dockerfile, attach persistent disk `/app/data`. `render.yaml` is a ready Blueprint **with a paid starter service + disk**; review provider pricing before approving it.
-2. **Railway**, deploy this GitHub repository; Dockerfile + `railway.json` are included. Add a Volume at `/app/data`, set `DATA_DIR=/app/data`, generate a public HTTPS domain.
-3. **VPS + Docker Compose**, for full control / persistent local storage.
-
-Full click-by-click instructions, reverse proxy, TURN, backup and troubleshooting: **[docs/HOSTING.md](docs/HOSTING.md)**. No paid cloud service is provisioned by committing these files.
-
-```sh
-# From the cloned repo; builds locally and keeps progress in a named Docker volume.
-docker compose up -d --build
-# Open http://YOUR-SERVER-IP:3000 (put behind HTTPS before using voice).
-```
-
-`MAX_PLAYERS` is capped at 64 as a safety bound, **not a verified 64-player capacity claim**. Start small and load-test your chosen CPU / region. On Node, use exactly **one replica**: the in-memory world and JSON persistence do not support horizontal scaling. Cloudflare routes all sockets to one fixed `City` object; its HTTP entrypoint may scale without duplicating the world. Players reconnect after deployments, but position/vehicle/wanted are not restored.
-
-## GitHub Actions & images
-
-Every push to `main`, tag `v*`, PR, or manual run triggers:
-
-1. Syntax / secret-pattern hygiene, 48 Node/game/SQLite unit+integration tests on Node 22 **and** 24.
-2. Ten Chromium browser tests **on each backend** covering desktop, mobile portrait/landscape, two-client chat/reconnect, studio/customization, real keyboard/touch car interaction, capsule/camera/body bounds, 2D fallback and real two-peer WebRTC with fake microphone RTP.
-3. Eight integration tests against real local Cloudflare `workerd`, including durable restart, identity handoff, flooding, origin checks and public asset boundaries.
-4. Reproducible runtime packaging into an Actions artifact (`dist/` + `SHA256SUMS`).
-5. **Only after all backend tests pass**, build and push multi-architecture Docker images (`linux/amd64`, `linux/arm64`) to:
-
-```text
-ghcr.io/xykal/veyra-neon-district:latest
-ghcr.io/xykal/veyra-neon-district:sha-<commit>
-ghcr.io/xykal/veyra-neon-district:v0.3.0  # when that release tag is pushed
-```
-
-Cloudflare deploy runs after those same checks when Actions secrets `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` and variable `CLOUDFLARE_DEPLOY_ENABLED=true` are configured. Only pushes to `main` deploy; pull requests never get hosting credentials. See [the Cloudflare guide](docs/CLOUDFLARE.md).
-
-The published image is also started in CI: health endpoint, writable data directory and non-root game-process UID are checked.
-
-Publishing uses Actions' built-in `GITHUB_TOKEN` with job-scoped package write permission—not an uploaded personal token. A newly created GHCR package can be private; its owner must check package visibility before unauthenticated pulling. Building directly from the GitHub Dockerfile avoids that dependency.
-
-## Development / verification
-
-```sh
-npm ci --ignore-scripts
-npm run check
-npm test
-npx playwright install --with-deps chromium
-npm run test:e2e
-npm run build
-npm run build:cloudflare
-npm run test:cloudflare
-npm run test:e2e:cloudflare
-npm run assets       # regenerate original bus + model metadata only when changing assets
-```
-
-`npm run build` copies the self-contained runtime to `dist/`, strips dev dependencies, and emits file checksums. Start the result with `cd dist && npm start`. No external bundler or asset download is required to build.
-
-Tests run with headless Chromium / SwiftShader; mobile settings are **emulation**, not physical Android/iPhone/Safari certification. The voice test confirms local peer negotiation and audio RTP; it is not a WAN/carrier-NAT/TURN test. See **[docs/TESTING.md](docs/TESTING.md)** for scope and remaining limits.
-
-## Layout
-
-```text
-server/            HTTP, bounded RFC6455 transport, voice signalling, hashed profiles
-shared/            Deterministic map, road GPS routing, authoritative game/physics
-public/            Three.js client, touch UI, voice, GPS, graphics/audio, vendored assets
-public/2d/         Lite client (same protocol)
-tests/             Node integration + Playwright browser regression tests
-tools/             Check, build, original bus generator, GLB metadata tools
-.github/workflows/ CI, runtime artifact, multi-arch Docker publish
-```
-
-## Persistence, privacy & security
-
-- Back up `DATA_DIR/profiles.json`. Keep the volume across deploys. Do not delete a Docker volume unless you intend to reset progress.
-- Losing browser site data loses access to that resume identity. A copied resume token grants access to that profile; do not share it. One active tab per profile is enforced.
-- JSON autosave can lose up to ~10 seconds on a hard kill; a normal SIGTERM flushes progress. Corrupt/unreadable profile files fail startup instead of silently resetting them.
-- Microphone starts only with consent. Release V/VOX, blur/hide, disable, or leave to stop transmitting. Disable mic in settings to release the device entirely.
-- WebSocket message size/rate/backpressure limits, heartbeat, idle-control release and browser-origin checks are implemented. This is still an alpha, not a production anti-cheat / account / moderation platform. See [SECURITY.md](SECURITY.md).
-- Real `.env` files, `env.txt`, credential paths, local profiles and test reports are ignored and excluded from Docker context. Never commit them or put hosting tokens in browser JavaScript.
-
-## License & credits
-
-Project code/original assets: **MIT**. Three.js: MIT. Kenney Car Kit: CC0. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [vehicle credits](public/assets/cars/CREDITS.md).
+Made in the open by [xykal](https://github.com/xykal/veyra-neon-district) — selamat bertualang, warga baru.

@@ -103,7 +103,7 @@ func refresh_vault():
 const LOOK_NAMES=["Raka","Kai","Atlas","Naya","Luna","Asha"]
 func _menu():
  menu=_panel(Vector2(28,24),Vector2(392,0));var scroll=ScrollContainer.new();scroll.custom_minimum_size=Vector2(348,648);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;menu.add_child(scroll);var v=VBoxContainer.new();v.size_flags_horizontal=Control.SIZE_EXPAND_FILL;v.add_theme_constant_override("separation",12);scroll.add_child(v)
- _label(v,"VEYRA",60,Color("eef5e8"));_label(v,"N E O N   D I S T R I C T",13,Color("6fe0b8"));_label(v,"NATIVE 0.5.2 ALPHA  ·  LOMBOK ISLAND",10,Color("7fa8a2"))
+ _label(v,"VEYRA",60,Color("eef5e8"));_label(v,"M U L T I P L A Y E R   R O L E P L A Y",13,Color("6fe0b8"));_label(v,"NATIVE 0.5.3 ALPHA  ·  LOMBOK ISLAND",10,Color("7fa8a2"))
  _sep(v)
  _label(v,"Identitas lo.",22,Color("e2f0e7"))
  _label(v,"NAMA WARGA",9,Color("6fe0b8"))
@@ -133,7 +133,7 @@ func _hud():
  hud=Control.new();hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);hud.mouse_filter=Control.MOUSE_FILTER_IGNORE;root.add_child(hud)
  hud_canvas=Hud.new();hud_canvas.app=app;hud.add_child(hud_canvas)
  radar=Radar.new();radar.app=app;hud.add_child(radar)
- status_label=_label(hud,"NEON DISTRICT / OFFLINE",11,Color("b0cebe"))
+ status_label=_label(hud,"VEYRA / OFFLINE",11,Color("b0cebe"))
  stats_label=_label(hud,"",10,Color("7796a4"));stats_label.visible=false
  prompt=Button.new();prompt.focus_mode=Control.FOCUS_NONE;prompt.add_theme_font_size_override("font_size",12);prompt.pressed.connect(func():app.interact());hud.add_child(prompt)
  gps_title=_label(hud,"",12,Color("c3dacf"));gps_title.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
@@ -221,7 +221,7 @@ func message(text):
 func notify(text,seconds=3.0):toast.text=str(text);toast_time=seconds
 func update_hud():
  if not app.player:return
- var driving=app.player.driving!=null;status_label.text="NEON DISTRICT / "+("ONLINE" if app.online else "PROVING GROUND")
+ var driving=app.player.driving!=null;status_label.text="VEYRA / "+("ONLINE" if app.online else "PROVING GROUND")
  prompt.visible=app.playing and (driving or app.candidate!=null)
  if driving:prompt.text="F  ·  REM UNTUK TURUN" if absf(app.player.driving.speed_mps)>4.5 else "F  ·  TURUN KENDARAAN"
  elif app.candidate:prompt.text="F  ·  MASUK "+str(app.candidate.definition.label).to_upper()
@@ -238,4 +238,4 @@ func _touch_action(key,pressed):
  elif key=="chat":open_chat()
  elif key=="horn":app.horn()
 func show_credits():
- var dialog=AcceptDialog.new();dialog.title="Veyra Native / Credits";dialog.min_size=Vector2i(640,460);var text=RichTextLabel.new();text.custom_minimum_size=Vector2(600,390);text.text="Veyra code/audio: MIT. Godot: MIT. Quaternius human models/animations: CC0. Kenney vehicles: CC0. No GTA assets.\n\n"+Engine.get_license_text()+"\n"+JSON.stringify(Engine.get_copyright_info(),"  ")+"\n"+JSON.stringify(Engine.get_license_info(),"  ");dialog.add_child(text);root.add_child(dialog);dialog.popup_centered();dialog.confirmed.connect(func():dialog.queue_free())
+ var dialog=AcceptDialog.new();dialog.title="Veyra / Credits";dialog.min_size=Vector2i(640,460);var text=RichTextLabel.new();text.custom_minimum_size=Vector2(600,390);text.text="Veyra code/audio: MIT. Godot: MIT. Quaternius human models/animations: CC0. Kenney vehicles: CC0. No GTA assets.\n\n"+Engine.get_license_text()+"\n"+JSON.stringify(Engine.get_copyright_info(),"  ")+"\n"+JSON.stringify(Engine.get_license_info(),"  ");dialog.add_child(text);root.add_child(dialog);dialog.popup_centered();dialog.confirmed.connect(func():dialog.queue_free())

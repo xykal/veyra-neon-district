@@ -5,7 +5,7 @@ const STREAMS=[
  "engine_idle","engine_mid","engine_high","engine_start","engine_stop","engine_key",
  "skid","brake","scrape","shot","impact","punch","ragdoll_hit","door","horn","siren",
  "jump","land","land_hard","cloth","wind","wind_high","rain","thunder","ocean","birds",
- "ui","ui_confirm","ui_back","ui_level"
+ "ui","ui_confirm","ui_back","ui_level","welcome_pa"
 ]
 var streams={}
 var pool=[]

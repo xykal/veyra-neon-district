@@ -18,7 +18,7 @@ func run():
  for i in range(120):
   await physics_frame;minimum=minf(minimum,car.global_position.y);maximum=maxf(maximum,car.global_position.y);max_speed=maxf(max_speed,car.linear_velocity.length())
  print("DRIVER_SETTLE ",car.global_position," minY=",minimum," maxY=",maximum," maxSpeed=",max_speed)
- check(minimum>-.2 and maximum<1.5,"occupied car stays on ground")
+ check(minimum>before.y-.2 and maximum<before.y+1.5,"occupied car stays on ground")
  check(max_speed<3,"entering a stationary car does not inject launch energy")
  check(car.global_position.distance_to(before)<4,"driver entry does not teleport/fall away")
  var point=car.safe_exit(game.player)

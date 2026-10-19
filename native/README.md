@@ -1,8 +1,8 @@
-# Veyra Native — 0.5.2-alpha.3
+# Veyra Native — 0.5.3-alpha.1
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.2-alpha.3)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.3-alpha.1)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
@@ -26,7 +26,7 @@ The quality pass the alpha needed: car and fashion art authored in real 3D softw
 - **Lobby UI/UX + loading splash**: Outfit (OFL) font, clear hierarchy (identity / looks / CTA / quality), look chips, glass panels; new original Lombok dusk loading art (`assets/boot_splash.png`) with gradient overlay, progress bar and tips.
 - **Map truth**: `terrain.gdshader` rebuilt clean (a leftover `road` identifier was silently breaking shader compilation so terrain never drew); baked `city_mask.png` from `district.json` drives real asphalt roads, park grass, ponds and dirt lots; saturated tropical building palette + brighter tree tones in the shared map (web benefits too); fog thinned and warmed so the world is not pale blue wash. Benchmarks: `benchmarks/0.5.2-lombok-llvmpipe.json`.
 - **Animations complete**: `Jump_Start`/`Jump_Land` on takeoff/landing, `Hit_Chest` on damage, `Interact` on F actions, plus the unarmed punch path (`Interact` + `punch`/`ragdoll_hit` SFX + ragdoll).
-- **All SFX live**: UI/back/confirm clicks, brake squeal, police siren loops on active cruisers, engine idle→mid→high with stop, cloth rustle on jumps, punch melee, rain + thunder weather cycles, high-speed wind bed. 38 synthesized WAVs, all reachable in play.
+- **All SFX live**: UI/back/confirm clicks, brake squeal, police siren loops on active cruisers, engine idle→mid→high with stop, cloth rustle on jumps, punch melee, rain + thunder weather cycles, high-speed wind bed. 39 synthesized WAVs, all reachable in play.
 
 ## 0.5.1 Real Lombok Island
 
@@ -35,7 +35,7 @@ The island is now a real Lombok shell (outline, Gili islets, Rinjani crater + Se
 - **Custom splash / no Godot logo**: `assets/boot_splash.png` is an original Lombok-sunset Veyra boot art. The 0.5.1 settings probe fixes the key path (`boot_splash/*` inside `[application]`) so the engine logo is really gone; launcher icon is the original V mark.
 - **Real Lombok island shell**: `tools/native-lombok-map.py` v3 writes `assets/island.json` (deterministic) with the Lombok coastline, Gili islets, Rinjani volcanic profile with crater and Segara Anak lake, terraces, palms/shrubs/grass, warungs, rocks, docks and villages; `district.json` carries 22 real Lombok POI names. Shared online city collision stays planar.
 - **Streetwear character pass**: `tools/native-fashion.py` makes pants baggier/cargo, tops oversized and boots chunkier without touching the 65-bone rig or 20 clips. Runtime accessories add caps, crossbody bags, cargo pockets, cuffs and chains per preset.
-- **Motion/SFX completeness**: smoother clip crossfades, additive lean/bob, jump/land layers, landing intensity, footstep surfaces, vehicle enter/exit/brake/scrape/impact and coastal ambient loops (38 synthesized WAVs).
+- **Motion/SFX completeness**: smoother clip crossfades, additive lean/bob, jump/land layers, landing intensity, footstep surfaces, vehicle enter/exit/brake/scrape/impact and coastal ambient loops (39 synthesized WAVs).
 - **Larger mobile controls**: pads scale up with `control_scale` (pause slider `UKURAN TOMBOL SENTUH`), stay clamped inside 960×540/1280×720/1600×720 and support independent steering, pedals and camera-look. Aim response is 1.35× with wider pitch so it no longer feels stiff.
 - **AA/graphics detail**: Balanced uses 2× MSAA, High uses 4× MSAA; terrain is one unshaded surface with height-band palette (sand→grass→jungle→rock→ash), crater relief shading and distance-fade detail; separate ocean shader; vehicles get clearcoat paint/glass/chrome/emissive lamp finishes and body details. SAFE still boots with no MSAA/shadows and trims on memory warnings.
 - **360° lobby + vault**: drag the character in the menu for a full 360° inspection, save/pick 3 vault looks, and read the new Lombok Is. title.

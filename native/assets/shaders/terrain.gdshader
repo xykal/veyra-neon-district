@@ -97,8 +97,8 @@ void fragment(){
  float seg_v=step(fract(p.y/8.0),0.36);
  float seg_h=step(fract(p.x/8.0),0.36);
  float road_core=smoothstep(0.72,0.92,mask.r);
- float cross=on_v*on_h;
- float dash=max(on_v*seg_v*(1.0-on_h),on_h*seg_h*(1.0-on_v))*(1.0-cross)*road_core*city_mask*(0.35+0.65*detail);
+ float crossing=on_v*on_h;
+ float dash=max(on_v*seg_v*(1.0-on_h),on_h*seg_h*(1.0-on_v))*(1.0-crossing)*road_core*city_mask*(0.35+0.65*detail);
  city_ground=mix(city_ground,vec3(0.82,0.80,0.70),dash*0.8);
 
  vec3 color=mix(mountain,city_ground,city_mask);

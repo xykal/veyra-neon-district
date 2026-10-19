@@ -41,7 +41,7 @@ func _generate(incremental,progress):
  building=true;var started=Time.get_ticks_msec();var slice_started=Time.get_ticks_usec();var m=data.map
  _terrain();_progress(progress,.06,"Menyiapkan pulau dan jalan")
  if incremental:await get_tree().process_frame
- _island_scenery();_progress(progress,.16,"Menanam pantai, sawah, dan warung")
+ _island_scenery();_airport();_progress(progress,.16,"Menanam pantai, sawah, dan warung")
  if incremental:await get_tree().process_frame
  var facade=ShaderMaterial.new();facade.shader=load("res://assets/shaders/facade.gdshader")
  var total=m.buildings.size()
@@ -162,6 +162,54 @@ func _terrain():
  _collision_box(Vector3(world_size/2,-.15,world_size/2),Vector3(world_size+80,.3,world_size+80))
  var ocean=MeshInstance3D.new();ocean.name="OceanSurface";ocean.set_meta("ocean_surface",true);var plane=PlaneMesh.new();plane.size=Vector2(span+260,span+260);ocean.mesh=plane;ocean.position=Vector3(world_size/2,float(island.get("seaLevel",-0.55)),world_size/2)
  var ocean_mat=ShaderMaterial.new();ocean_mat.shader=load("res://assets/shaders/ocean.gdshader");ocean.material_override=ocean_mat;ocean.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF;add_child(ocean)
+func _ap(pos,size,mat,kind,col,yaw=0.0):_box(pos,size,mat,kind,col,yaw)
+func _aplane(center,a):
+ var wood2=_standard(0,.86);var dark2=_standard(.2,.65);var Y=5.75
+ var rot=Basis(Vector3.UP,a);var f=Basis(Vector3.UP,a)*Basis(Vector3(0,0,1),-PI/2)
+ _batch(center+Vector3(0,Y+2.3,0),f.scaled(Vector3(1.15,21,1.15)),_unit("cylinder"),wood2,"airport",Color("e7e3da"))
+ _batch(center+Vector3(0,Y+2.3,0)+rot*Vector3(11.5,0,0),f.scaled(Vector3(.98,3.2,.98)),_unit("cylinder"),wood2,"airport",Color("e7e3da"))
+ _ap(center+Vector3(0,Y+2.1,0)+rot*Vector3(1.2,0,0),Vector3(2.6,.3,21),wood2,"airport",Color("d8d4cb"),a)
+ _ap(center+Vector3(0,Y+2.3,0)+rot*Vector3(-8.8,0,0),Vector3(1.7,.24,8.6),wood2,"airport",Color("d8d4cb"),a)
+ _ap(center+Vector3(0,Y+3.8,0)+rot*Vector3(-8.6,0,0),Vector3(3.0,2.4,.24),wood2,"airport",Color("2a6f8e"),a)
+ for sgn in [-1.0,1.0]:
+  _ap(center+Vector3(0,Y+2.95,0)+rot*Vector3(2.2,0,sgn*1.12),Vector3(9.5,.55,.12),dark2,"airport",Color("1c2229"),a)
+ _collision_box(center+Vector3(0,Y+2.5,0),Vector3(22,5.5,4.4),a)
+func _airport():
+ var dark=_standard(.2,.65);var metal=_standard(.55,.55);var wood=_standard(0,.86)
+ var lamp=_standard(0,.25,Color("c5b06d")*.45);var white=Color("e9e6dc");var Y=5.75
+ _ap(Vector3(240,Y/2,455),Vector3(352,Y,26),dark,"airport",Color("242830"))
+ _ap(Vector3(228,Y/2,428),Vector3(70,Y,32),dark,"airport",Color("2c3138"))
+ _ap(Vector3(240,Y/2,440),Vector3(12,Y,14),dark,"airport",Color("2c3138"))
+ _collision_box(Vector3(240,Y/2,455),Vector3(352,Y,26))
+ _collision_box(Vector3(228,Y/2,428),Vector3(70,Y,32))
+ _collision_box(Vector3(240,Y/2,440),Vector3(12,Y,14))
+ for i in range(11):
+  _ap(Vector3(92+i*29.1,Y+.025,455),Vector3(5.2,.02,.55),wood,"airport",white)
+ _ap(Vector3(240,Y+.025,445.4),Vector3(332,.02,.32),wood,"airport",white)
+ _ap(Vector3(240,Y+.025,464.6),Vector3(332,.02,.32),wood,"airport",white)
+ for sgn in [-1.0,1.0]:
+  for i in range(6):
+   _ap(Vector3(240+sgn*163,Y+.025,449.6+i*1.9),Vector3(3.2,.02,.85),wood,"airport",white)
+  for i in range(18):
+   _ap(Vector3(80+i*18.4,Y+.15,455+sgn*10.7),Vector3(.4,.22,.4),lamp,"airport",Color("fff3d6"))
+ for i in range(5):
+  _ap(Vector3(60-i*2.6,Y+.15,455),Vector3(.45,.24,.45),lamp,"airport",Color("fff3d6"))
+ _ap(Vector3(222,Y+4.6,416.5),Vector3(54,9.2,13),wood,"airport",Color("d9d3c4"))
+ _ap(Vector3(222,Y+9.5,416.5),Vector3(56,.55,14),dark,"airport",Color("4a5158"))
+ for i in range(5):
+  _ap(Vector3(200+i*11,Y+4.0,423.2),Vector3(8.6,3.2,.24),dark,"airport",Color("1c2229"))
+ _collision_box(Vector3(222,Y+4.6,416.5),Vector3(54,9.2,13))
+ _cylinder(Vector3(256,Y+7.0,421),1.25,14,metal,"airport",Color("b9bec3"))
+ _ap(Vector3(256,Y+15.0,421),Vector3(4.2,2.4,4.2),dark,"airport",Color("222a31"))
+ _ap(Vector3(256,Y+16.4,421),Vector3(2.4,.14,2.4),lamp,"airport",Color("fff3d6"))
+ _cylinder(Vector3(256,Y+19.6,421),.07,5.2,metal,"airport",Color("8a9096"))
+ _collision_box(Vector3(256,Y+8,421),Vector3(3,16,3))
+ _aplane(Vector3(198,0,434),0.32);_aplane(Vector3(244,0,430),0.24)
+ _cylinder(Vector3(200,Y+2.55,441),.08,5.1,metal,"airport",Color("7d8288"))
+ _ap(Vector3(201.1,Y+4.85,441),Vector3(1.7,.38,.38),wood,"airport",Color("e07a2c"),0.35)
+ for i in range(2):
+  _batch(Vector3(250+i*9,Y+1.45,438),Basis(Vector3(0,0,1),-PI/2).scaled(Vector3(1.35,8.4,1.35)),_unit("cylinder"),metal,"airport",Color("9aa0a6"))
+  _collision_box(Vector3(250+i*9,Y+1.45,438),Vector3(8.4,2.9,2.9))
 func _island_scenery():
  if island.is_empty():return
  var foliage=_standard(0,.92);var wood=_standard(0,.88);var rock_mat=_standard(0,.95);var rice=_standard(0,.9);var thatch=_standard(0,.98)
