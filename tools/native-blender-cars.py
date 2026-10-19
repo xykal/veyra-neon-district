@@ -67,7 +67,7 @@ def box(name, size, loc, material, bevel_w=0.025, rot=(0,0,0)):
     if bevel_w: bevel(o, bevel_w)
     return o
 
-def cyl(name, radius, depth, loc, material, rot=(math.pi/2,0,0), verts=20, bevel_w=0.0):
+def cyl(name, radius, depth, loc, material, rot=(0,0,0), verts=20, bevel_w=0.0):
     bpy.ops.mesh.primitive_cylinder_add(vertices=verts, radius=radius, depth=depth, location=loc, rotation=rot)
     o = bpy.context.active_object
     finish(o, name, material)
@@ -98,7 +98,7 @@ def profile_solid(name, pts, width, material, bevel_w=0.03):
     return obj
 
 def arch_cut(body, x, radius, width):
-    bpy.ops.mesh.primitive_cylinder_add(vertices=18, radius=radius, depth=width, location=(x, radius*0.72, 0), rotation=(math.pi/2,0,0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=18, radius=radius, depth=width, location=(x, radius*0.72, 0), rotation=(0,0,0))
     cut = bpy.context.active_object
     mod = body.modifiers.new('Arch', 'BOOLEAN')
     mod.operation = 'DIFFERENCE'; mod.object = cut; mod.solver = 'FAST'
@@ -298,10 +298,10 @@ def export(path):
     for o in bpy.data.objects:
         o.matrix_world = rot @ o.matrix_world
     bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    bpy.ops.object.select_all(action='SELECT')
+    # KEEP node TRS (no transform_apply / export_apply): wheel nodes keep hub origins so
+    # runtime wheel spin pivots at the hub, and meshes never double-apply transforms.
     bpy.ops.export_scene.gltf(filepath=os.path.abspath(path), export_format='GLB', use_selection=True,
-                              export_yup=True, export_apply=True)
+                              export_yup=True, export_apply=False)
     print('BLEND_EXPORT', path, os.path.getsize(path))
 
 def go(kind, L, W, H, builder, **kw):

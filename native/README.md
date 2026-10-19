@@ -1,13 +1,17 @@
-# Veyra Native — 0.5.2-alpha.1
+# Veyra Native — 0.5.2-alpha.2
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.2-alpha.1)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.2-alpha.2)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
+
+## 0.5.2-alpha.2 — round wheels & true wheel-spin
+
+Hotfix on the alpha.1 quality round: the Blender car kit exported with double-applied transforms, so wheels baked as flat discs and runtime wheel spin pivoted at the car centre. The export now keeps per-node transforms (wheel nodes sit at their hubs), wheels are proper discs, and the game renders every vehicle assembled (verified top-down + rear hero shots in-game). Also new: `B` emotes (dance loop with cloth rustle) and `Jump_Land` playback polish on landing.
 
 ## 0.5.2 Quality Round — Blender art, UI, map truth, full SFX
 

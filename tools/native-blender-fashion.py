@@ -75,7 +75,7 @@ def export(path):
             bpy.data.objects.remove(o, do_unlink=True)
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.export_scene.gltf(filepath=os.path.abspath(path), export_format='GLB',
-                              use_selection=True, export_yup=True, export_apply=True)
+                              use_selection=True, export_yup=True, export_apply=False)
     print('FASHION_EXPORT', path, os.path.getsize(path))
 
 FABRIC='fabric'; DENIM='denim'; METAL='metal'; SKIN='skin'

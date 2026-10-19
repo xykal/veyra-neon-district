@@ -258,6 +258,11 @@ func _process(delta):
   if ui.touch.enabled:move=ui.touch.read_move();player.orbit(ui.touch.take_look()*float(prefs.data.look_sensitivity))
   else:move=Vector2(float(Input.is_physical_key_pressed(KEY_D))-float(Input.is_physical_key_pressed(KEY_A)),float(Input.is_physical_key_pressed(KEY_S))-float(Input.is_physical_key_pressed(KEY_W))).limit_length(1)
  player.controls={"move":move,"sprint":(ui.touch.wants_sprint() if ui.touch.enabled else Input.is_physical_key_pressed(KEY_SHIFT)) and not paused,"jump":((ui.touch.held.brake if player.driving else ui.touch.held.jump) if ui.touch.enabled else Input.is_physical_key_pressed(KEY_SPACE)) and not paused,"crouch":Input.is_physical_key_pressed(KEY_CTRL) and not ui.touch.enabled and not paused,"aim":((ui.touch.held.aim or ui.touch.held.fire) if ui.touch.enabled else Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)) and not paused}
+ if not paused and not online and player and player.avatar and not player.driving and Input.is_physical_key_pressed(KEY_B):
+  if not player.get_meta("emote_latch",false):
+   player.set_meta("emote_latch",true);player.avatar.emote()
+   if audio_node:audio_node.play_at("cloth",player.global_position,-14)
+ elif player:player.set_meta("emote_latch",false)
  player.enabled=not paused or online
  if player.driving:
   if not online:player.driving.set_drive(-move.y,move.x,player.controls.jump)

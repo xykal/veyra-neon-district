@@ -7,9 +7,6 @@ path="res://.godot/imported/tractor-shovel_colormap.png-62da735dbc902d5748180bd6
 metadata={
 "vram_texture": false
 }
-generator_parameters={
-"md5": "8fa2e771fb74ce0bd4942f13b0fb9a3c"
-}
 
 [deps]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

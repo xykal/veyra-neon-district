@@ -193,6 +193,7 @@ func locomotion(speed,sprinting,airborne=false,crouched=false,seated=false,aim=f
  var clip="Idle_Loop"
  if seated:clip="Driving_Loop"
  elif airborne:clip="Jump_Loop"
+ elif land_time>.12 and animator and animator.has_animation("Jump_Land"):clip="Jump_Land"
  elif attack_time>0:clip="Pistol_Shoot"
  elif aim:clip="Pistol_Aim_Neutral"
  elif crouched:clip="Crouch_Fwd_Loop" if speed>.2 else "Crouch_Idle_Loop"
@@ -200,6 +201,14 @@ func locomotion(speed,sprinting,airborne=false,crouched=false,seated=false,aim=f
  elif speed>1.8:clip="Jog_Fwd_Loop"
  elif speed>.15:clip="Walk_Loop"
  play_motion(clip,clampf(speed/3.15,.86,1.22) if clip in ["Jog_Fwd_Loop","Walk_Loop","Sprint_Loop"] else 1.0)
+func emote():
+ if ragdoll:return
+ current="";play_motion("Dance_Loop")
+
+func hit_reaction():
+ if ragdoll:return
+ attack_time=.2;current="";play_motion("Hit_Chest")
+
 func start_ragdoll(impulse=Vector3.ZERO):
  if ragdoll:return
  if not ragdoll_prepared:_make_ragdoll()
