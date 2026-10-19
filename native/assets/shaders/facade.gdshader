@@ -13,7 +13,7 @@ float rect(vec2 uv,vec2 lo,vec2 hi,vec2 aa){
 void fragment(){
  bool roof=abs(world_normal.y)>0.7;
  vec3 base=COLOR.rgb;
- if(roof){ALBEDO=base*0.58;ROUGHNESS=0.94;}
+ if(roof){vec3 r=base*0.58;ALBEDO=mix(vec3(dot(r,vec3(0.333))),r,0.62);ROUGHNESS=0.94;}
  else{
   vec2 uv=(abs(world_normal.x)>0.7?world_pos.zy:world_pos.xy)/vec2(2.7,3.0);
   vec2 aa=max(fwidth(uv),vec2(0.002));

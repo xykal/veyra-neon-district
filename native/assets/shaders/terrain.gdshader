@@ -89,6 +89,17 @@ void fragment(){
  city_ground=mix(city_ground,water_col,mask.b);
  city_ground=mix(city_ground,asphalt,mask.r);
  city_ground=mix(city_ground,vec3(0.62,0.60,0.55),smoothstep(0.25,0.5,mask.r)*(1.0-smoothstep(0.5,0.78,mask.r))*0.35*detail);
+ // Lane markings: 4 m dash on the 60 m street grid, only on asphalt core.
+ float gx=min(fract(p.x/60.0),1.0-fract(p.x/60.0))*60.0;
+ float gz=min(fract(p.y/60.0),1.0-fract(p.y/60.0))*60.0;
+ float on_v=step(gx,0.065);
+ float on_h=step(gz,0.065);
+ float seg_v=step(fract(p.y/8.0),0.36);
+ float seg_h=step(fract(p.x/8.0),0.36);
+ float road_core=smoothstep(0.72,0.92,mask.r);
+ float cross=on_v*on_h;
+ float dash=max(on_v*seg_v*(1.0-on_h),on_h*seg_h*(1.0-on_v))*(1.0-cross)*road_core*city_mask*(0.35+0.65*detail);
+ city_ground=mix(city_ground,vec3(0.82,0.80,0.70),dash*0.8);
 
  vec3 color=mix(mountain,city_ground,city_mask);
  ALBEDO=color*(1.0+grain*0.055)*relief;

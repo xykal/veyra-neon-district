@@ -1,13 +1,17 @@
-# Veyra Native — 0.5.2-alpha.2
+# Veyra Native — 0.5.2-alpha.3
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.2-alpha.2)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.2-alpha.3)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
+
+## 0.5.2-alpha.3 — city color truth & lane markings
+
+Map pass on the city: sun energy dropped from 1.65 to 1.06 (warm walls were blowing out to neon yellow), the building palette desaturated into stucco/terracotta tropical tones with per-building lightness variation, roofs greyscaled, and real dashed lane markings now paint the 60 m street grid (kept out of intersections). Verified across four street views plus the bay hero shot.
 
 ## 0.5.2-alpha.2 — round wheels & true wheel-spin
 
