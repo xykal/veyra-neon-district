@@ -1,13 +1,25 @@
-# Veyra Native — 0.5.3-alpha.4
+# Veyra Native — 0.5.4-alpha.1
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.3-alpha.4)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.4-alpha.1)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
+
+## 0.5.4-alpha.1 — the realism pass: PBR world, sky, lighting, visual QA
+
+The big one. The world no longer reads as flat-shaded boxes:
+
+- **PBR textures (CC0, ambientCG)**: real albedo/roughness sets for asphalt, concrete, grass, rock, sand, brick and metal drive the terrain and building surfaces — texture splatting by height/slope (beach → grass → jungle → rock → ash), city mask keeps roads/parks/lots paved and green.
+- **Custom sky**: hand-written sky shader — dusk-blue gradient with warm horizon, sun disc + glow, drifting fbm cloud deck with shaded undersides. Feeds sky-based ambient and reflections.
+- **Lighting overhaul (GTA-style intent)**: ACES tonemapping with saturation/contrast adjustments, sky ambient + fill light so shadow sides never crush to black, higher sun with soft blurred shadows, SSAO + subtle additive bloom on Balanced/High.
+- **Facade v2**: walls sample brick/concrete textures with normal perturbation, window bays keep frame reveal + sills + shop band, glass now picks up sky-tinted fresnel reflections.
+- **Trees**: layered canopies with darkened undersides instead of flat green balls.
+- **Visual QA tooling** (`tools/native-visual-audit.py`): automated pre-release validation — captures lobby/loading/city/street/avatar/vehicle/coast, checks exposure + contrast + error logs per frame, writes a contact sheet, exits non-zero on failure. This rig caught three real bugs before this release: a GLES3 sky-shader compile failure (`SUN_DIRECTION` unavailable — black sky = black ambient), an invalid shadow property that aborted environment setup mid-function, and crushed shadow-side lighting.
+- **UI/UX carry-over** from the alpha.4 pass: hero lobby, glass HUD vitals, gold cash chip, speedometer arc, toast cards, loading percentage.
 
 ## 0.5.3-alpha.4 — professional quality overhaul
 
