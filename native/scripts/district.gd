@@ -151,7 +151,9 @@ func _terrain():
    indices.append_array(PackedInt32Array([a,c,b,b,c,d]))
  var arrays=[];arrays.resize(Mesh.ARRAY_MAX);arrays[Mesh.ARRAY_VERTEX]=verts;arrays[Mesh.ARRAY_NORMAL]=norms;arrays[Mesh.ARRAY_TEX_UV]=uvs;arrays[Mesh.ARRAY_INDEX]=indices
  var mesh=ArrayMesh.new();mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays);geometry.mesh=mesh
- var mat=ShaderMaterial.new();mat.shader=load("res://assets/shaders/terrain.gdshader");mat.set_shader_parameter("flat_radius",float(island.get("flatRadius",250.0)));mat.set_shader_parameter("world_center",Vector2(world_size/2,world_size/2))
+ var mat=ShaderMaterial.new();mat.shader=load("res://assets/shaders/terrain.gdshader");mat.set_shader_parameter("flat_radius",float(island.get("flatRadius",250.0)));mat.set_shader_parameter("world_center",Vector2(world_size/2,world_size/2));mat.set_shader_parameter("world_size",world_size)
+ var mask_img=load("res://assets/city_mask.png")
+ if mask_img:mat.set_shader_parameter("map_tex",mask_img)
  var image=Image.create_empty(64,64,false,Image.FORMAT_RGB8);var rng=RandomNumberGenerator.new();rng.seed=192040
  for y in range(64):
   for x in range(64):
@@ -208,7 +210,7 @@ func _island_scenery():
    _batch(p+offset+Vector3(0,1.1,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.4,2.2,2.0)),_unit("box"),wood,"hut",Color("b7895f").lightened(.02))
    _batch(p+offset+Vector3(0,2.55,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.9,.22,2.6)),_unit("box"),thatch,"roof",Color("77502f"))
 func _setup_environment():
- environment=WorldEnvironment.new();var e=Environment.new();var sky=Sky.new();var sm=ProceduralSkyMaterial.new();sm.sky_top_color=Color("2c5488");sm.sky_horizon_color=Color("d9c19a");sm.ground_bottom_color=Color("243238");sm.ground_horizon_color=Color("b7a68c");sky.sky_material=sm;e.sky=sky;e.background_mode=Environment.BG_SKY;e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("c6d2dc");e.ambient_light_energy=.62;e.tonemap_mode=Environment.TONE_MAPPER_FILMIC;e.fog_enabled=true;e.fog_light_color=Color("b7c3c9");e.fog_density=.0015;e.fog_sky_affect=.22;environment.environment=e;add_child(environment)
+ environment=WorldEnvironment.new();var e=Environment.new();var sky=Sky.new();var sm=ProceduralSkyMaterial.new();sm.sky_top_color=Color("2b62a8");sm.sky_horizon_color=Color("e8c894");sm.ground_bottom_color=Color("243238");sm.ground_horizon_color=Color("b7a68c");sky.sky_material=sm;e.sky=sky;e.background_mode=Environment.BG_SKY;e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("c6d2dc");e.ambient_light_energy=.62;e.tonemap_mode=Environment.TONE_MAPPER_FILMIC;e.fog_enabled=true;e.fog_light_color=Color("cdd2c8");e.fog_density=.0007;e.fog_sky_affect=.12;environment.environment=e;add_child(environment)
  sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-42,-28,0);sun.light_color=Color("fff0d2");sun.light_energy=1.65;sun.shadow_enabled=quality>0;sun.directional_shadow_max_distance=45 if quality==1 else 75;add_child(sun)
 func _standard(metal=0.0,rough=.8,emission=Color.BLACK):
  var key=str(metal)+":"+str(rough)+":"+emission.to_html()
@@ -246,7 +248,7 @@ func set_quality(tier):
  quality=tier;distance_limit=[65.0,100.0,150.0][tier]
  if sun:sun.shadow_enabled=tier>0;sun.directional_shadow_max_distance=45 if tier==1 else 75
  for node in batch_nodes:node.visibility_range_end=distance_limit;node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if tier==0 or node.get_meta("kind") in ["leaves","lamps","red","green","water","frond","grass","rice","shrub"] else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
- if environment:environment.environment.fog_density=[.0024,.0016,.0011][tier];environment.environment.fog_sky_affect=.22
+ if environment:environment.environment.fog_density=[.0010,.0007,.0005][tier];environment.environment.fog_sky_affect=.12
 func nearest_poi(point):
  var best=null;var distance=INF
  for p in data.map.pois:

@@ -1,7 +1,8 @@
 shader_type spatial;
-render_mode cull_disabled,unshaded,depth_draw_opaque;
+render_mode cull_disabled,unshaded,depth_draw_opaque,fog_disabled;
 
 uniform sampler2D grain_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D map_tex : filter_linear_mipmap, repeat_disable;
 uniform float world_size = 480.0;
 uniform float flat_radius = 250.0;
 
@@ -53,14 +54,13 @@ void fragment(){
  float grain=mix(1.0,texture(grain_tex,p*0.5).r*1.15,0.55*detail);
 
  vec3 wet_sand=vec3(0.30,0.24,0.12);
- vec3 dry_sand=vec3(0.72,0.58,0.30);
- vec3 grass_col=vec3(0.16,0.42,0.06);
- vec3 jungle_col=vec3(0.045,0.19,0.022);
- vec3 rock_col=vec3(0.26,0.20,0.155);
- vec3 ash_col=vec3(0.13,0.105,0.09);
+ vec3 dry_sand=vec3(0.74,0.60,0.32);
+ vec3 grass_col=vec3(0.19,0.47,0.10);
+ vec3 jungle_col=vec3(0.09,0.28,0.05);
+ vec3 rock_col=vec3(0.37,0.31,0.25);
+ vec3 ash_col=vec3(0.24,0.215,0.20);
 
  float wet_band=1.0-smoothstep(0.0,0.75,height);
- float dry_sand_band=smoothstep(0.3,1.5,height)*(1.0-smoothstep(2.6,4.2,height));
  float grass_band=smoothstep(0.6,3.2,height)*(1.0-smoothstep(11.0,18.0,height));
  float jungle_band=smoothstep(3.0,6.2,height)*(1.0-smoothstep(12.0,19.0,height));
  float rock_band=smoothstep(10.0,16.0,height)*(1.0-smoothstep(24.0,32.0,height));
@@ -72,20 +72,25 @@ void fragment(){
  mountain=mix(mountain,ash_col,ash_band);
  mountain=mix(mountain,wet_sand,wet_band*0.92);
 
- // Fake sun shading keeps relief readable in the cheap unshaded path.
  float lambert=clamp(dot(world_normal,normalize(vec3(-0.52,0.78,-0.34))),0.0,1.0);
- float relief=mix(0.82,0.58+0.42*lambert,detail);
+ float relief=mix(0.92,0.68+0.40*lambert,detail);
 
- vec3 asphalt=mix(vec3(0.028,0.032,0.04),vec3(0.075,0.085,0.105),noise(p*0.11)*detail);
- asphalt+=vec3(0.06,0.065,0.08)*pow(max(0.0,lambert),3.0);
- vec3 pavement=mix(vec3(0.22,0.235,0.25),vec3(0.29,0.30,0.315),noise(p*0.08)*detail);
- float road=road_pattern(p);
- vec3 road_col=mix(pavement,asphalt,road);
- float dash=road_dash(p)*road*detail;
- road_col=mix(road_col,vec3(0.85,0.83,0.62),dash*0.72);
- road_col=mix(road_col,vec3(0.55,0.56,0.58),smoothstep(0.78,0.98,road)*(1.0-smoothstep(1.15,1.45,road))*detail);
+ vec2 muv=clamp(p/world_size,vec2(0.002),vec2(0.998));
+ vec4 mask=texture(map_tex,muv);
+ vec3 asphalt=mix(vec3(0.105,0.115,0.135),vec3(0.155,0.165,0.185),noise(p*0.11)*detail);
+ asphalt+=vec3(0.05,0.055,0.07)*pow(max(0.0,lambert),3.0);
+ vec3 pavement=mix(vec3(0.42,0.405,0.375),vec3(0.50,0.48,0.445),noise(p*0.08)*detail);
+ vec3 lot_dirt=mix(vec3(0.33,0.27,0.19),vec3(0.42,0.35,0.24),noise(p*0.13)*detail);
+ vec3 park_grass=mix(vec3(0.17,0.42,0.09),vec3(0.24,0.52,0.12),noise(p*0.09)*detail);
+ vec3 water_col=vec3(0.10,0.31,0.40);
+ vec3 city_ground=pavement;
+ city_ground=mix(city_ground,lot_dirt,mask.a);
+ city_ground=mix(city_ground,park_grass,mask.g);
+ city_ground=mix(city_ground,water_col,mask.b);
+ city_ground=mix(city_ground,asphalt,mask.r);
+ city_ground=mix(city_ground,vec3(0.62,0.60,0.55),smoothstep(0.25,0.5,mask.r)*(1.0-smoothstep(0.5,0.78,mask.r))*0.35*detail);
 
- vec3 color=mix(mountain,road_col,city_mask);
+ vec3 color=mix(mountain,city_ground,city_mask);
  ALBEDO=color*(1.0+grain*0.055)*relief;
- ROUGHNESS=mix(0.98,0.82,road*city_mask);
+ ROUGHNESS=mix(0.98,0.82,mask.r*city_mask);
 }

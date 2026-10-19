@@ -1,13 +1,24 @@
-# Veyra Native — 0.5.1-alpha.1
+# Veyra Native — 0.5.2-alpha.1
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.1-alpha.1)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.2-alpha.1)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
+
+## 0.5.2 Quality Round — Blender art, UI, map truth, full SFX
+
+The quality pass the alpha needed: car and fashion art authored in real 3D software (Blender 4.2 headless), a redesigned lobby + loading splash, the map rendering truthfully again (a broken terrain shader had been failing silently and hiding the whole island surface behind the ocean plane), the animation set wired end-to-end, and every synthesized SFX actually playing in game.
+
+- **Car kit v3 (`tools/native-blender-cars.py`)**: all 18 vehicles rebuilt in Blender as proper 3-box/fastback/SUV/pickup/van silhouettes in real metres — solidified panels with bevels, clearcoat paint, glass, chrome trim, head/tail lights, deeper wheels. `vehicle.gd` applies a uniform visual scale from the real vehicle length so nothing squashes. Verified in-game hero shot.
+- **Streetwear GLB set (`tools/native-blender-fashion.py`)**: cap (crown + curved brim), crossbody bag + strap + buckle, hood roll, cargo pockets with flaps, chain links and a jacket shell — modeled at bone-attachment origins and tinted per look. No more primitive box "accessories".
+- **Lobby UI/UX + loading splash**: Outfit (OFL) font, clear hierarchy (identity / looks / CTA / quality), look chips, glass panels; new original Lombok dusk loading art (`assets/boot_splash.png`) with gradient overlay, progress bar and tips.
+- **Map truth**: `terrain.gdshader` rebuilt clean (a leftover `road` identifier was silently breaking shader compilation so terrain never drew); baked `city_mask.png` from `district.json` drives real asphalt roads, park grass, ponds and dirt lots; saturated tropical building palette + brighter tree tones in the shared map (web benefits too); fog thinned and warmed so the world is not pale blue wash. Benchmarks: `benchmarks/0.5.2-lombok-llvmpipe.json`.
+- **Animations complete**: `Jump_Start`/`Jump_Land` on takeoff/landing, `Hit_Chest` on damage, `Interact` on F actions, plus the unarmed punch path (`Interact` + `punch`/`ragdoll_hit` SFX + ragdoll).
+- **All SFX live**: UI/back/confirm clicks, brake squeal, police siren loops on active cruisers, engine idle→mid→high with stop, cloth rustle on jumps, punch melee, rain + thunder weather cycles, high-speed wind bed. 38 synthesized WAVs, all reachable in play.
 
 ## 0.5.1 Real Lombok Island
 

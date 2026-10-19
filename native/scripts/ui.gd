@@ -56,18 +56,31 @@ func setup(game):
  toast=_label(root,"",14,Color("c5dfd1"));toast.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;toast.mouse_filter=Control.MOUSE_FILTER_IGNORE
  root.resized.connect(_layout);_layout()
 func _theme():
- var theme=Theme.new();theme.default_font_size=16
- var panel=StyleBoxFlat.new();panel.bg_color=Color("0b1c2af4");panel.border_color=Color("3d6f74");panel.set_border_width_all(1);panel.set_corner_radius_all(14);panel.content_margin_left=22;panel.content_margin_right=22;panel.content_margin_top=20;panel.content_margin_bottom=20;theme.set_stylebox("panel","PanelContainer",panel)
- var normal=StyleBoxFlat.new();normal.bg_color=Color("1c3d48");normal.border_color=Color("4c807d");normal.set_border_width_all(1);normal.set_corner_radius_all(7);normal.content_margin_left=14;normal.content_margin_right=14;normal.content_margin_top=11;normal.content_margin_bottom=11;theme.set_stylebox("normal","Button",normal)
- var hover=normal.duplicate();hover.bg_color=Color("2f5c5c");hover.border_color=Color("9ad5bd");theme.set_stylebox("hover","Button",hover)
- var pressed=normal.duplicate();pressed.bg_color=Color("427a63");theme.set_stylebox("pressed","Button",pressed)
+ var theme=Theme.new()
+ var outfit=load("res://assets/fonts/Outfit-Bold.ttf")
+ if outfit is FontFile:theme.default_font=outfit
+ theme.default_font_size=15
+ var panel=StyleBoxFlat.new();panel.bg_color=Color("0a1620f2");panel.border_color=Color("2b4d55");panel.set_border_width_all(1);panel.set_corner_radius_all(16);panel.content_margin_left=22;panel.content_margin_right=22;panel.content_margin_top=20;panel.content_margin_bottom=20
+ panel.shadow_color=Color(0,0,0,.45);panel.shadow_size=10
+ theme.set_stylebox("panel","PanelContainer",panel)
+ var normal=StyleBoxFlat.new();normal.bg_color=Color("16323c");normal.border_color=Color("2f5a60");normal.set_border_width_all(1);normal.set_corner_radius_all(9);normal.content_margin_left=14;normal.content_margin_right=14;normal.content_margin_top=12;normal.content_margin_bottom=12
+ theme.set_stylebox("normal","Button",normal)
+ var hover=normal.duplicate();hover.bg_color=Color("20525a");hover.border_color=Color("6fe0b8");theme.set_stylebox("hover","Button",hover)
+ var pressed=normal.duplicate();pressed.bg_color=Color("2b6f5c");pressed.border_color=Color("a7f0cf");theme.set_stylebox("pressed","Button",pressed)
+ var disabled=normal.duplicate();disabled.bg_color=Color("12242c");disabled.border_color=Color("1c333a");theme.set_stylebox("disabled","Button",disabled)
+ var line=StyleBoxFlat.new();line.bg_color=Color("2b4d55");line.content_margin_top=1;line.content_margin_bottom=1;theme.set_stylebox("separator","HSeparator",line)
  return theme
 func _panel(pos,minimum=Vector2(350,0)):
  var p=PanelContainer.new();p.position=pos;p.custom_minimum_size=minimum;root.add_child(p);return p
 func _label(parent,text,size=15,color=Color("c9d8db")):
  var l=Label.new();l.text=text;l.add_theme_font_size_override("font_size",size);l.modulate=color;l.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;l.mouse_filter=Control.MOUSE_FILTER_IGNORE;parent.add_child(l);return l
-func _button(parent,text,callback):
- var b=Button.new();b.text=text;b.focus_mode=Control.FOCUS_NONE;b.pressed.connect(callback);parent.add_child(b);return b
+func _button(parent,text,callback,sfx="ui"):
+ var b=Button.new();b.text=text;b.focus_mode=Control.FOCUS_NONE
+ b.pressed.connect(func():
+  if app and app.audio_node:app.audio_node.play_ui(sfx,-13.0)
+  callback.call()
+ )
+ parent.add_child(b);return b
 func _look_stage():
  look_stage=LookStage.new();look_stage.owner_ui=self;look_stage.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);look_stage.mouse_filter=Control.MOUSE_FILTER_IGNORE;root.add_child(look_stage)
 func _vault():
@@ -89,22 +102,31 @@ func refresh_vault():
   vault_buttons[i].text="SLOT "+str(i+1)+" · "+LOOK_NAMES[clampi(look,0,LOOK_NAMES.size()-1)]
 const LOOK_NAMES=["Raka","Kai","Atlas","Naya","Luna","Asha"]
 func _menu():
- menu=_panel(Vector2(26,22),Vector2(378,0));var scroll=ScrollContainer.new();scroll.custom_minimum_size=Vector2(334,620);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;menu.add_child(scroll);var v=VBoxContainer.new();v.size_flags_horizontal=Control.SIZE_EXPAND_FILL;v.add_theme_constant_override("separation",11);scroll.add_child(v)
- _label(v,"VEYRA",56,Color("e5ebdd"));_label(v,"N E O N   D I S T R I C T",14,Color("82b9aa"));_label(v,"NATIVE 0.5.1 / LOMBOK ISLAND",11,Color("9fd3c2"))
- _label(v,"Identitas lo. Distrik lo.",19,Color("e2f0e7"));_label(v,"NAMA WARGA",10)
- name_input=LineEdit.new();name_input.max_length=16;name_input.text=str(app.prefs.data.nickname);name_input.placeholder_text="Nama panggilan";v.add_child(name_input)
- var grid=GridContainer.new();grid.columns=3;v.add_child(grid)
+ menu=_panel(Vector2(28,24),Vector2(392,0));var scroll=ScrollContainer.new();scroll.custom_minimum_size=Vector2(348,648);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;menu.add_child(scroll);var v=VBoxContainer.new();v.size_flags_horizontal=Control.SIZE_EXPAND_FILL;v.add_theme_constant_override("separation",12);scroll.add_child(v)
+ _label(v,"VEYRA",60,Color("eef5e8"));_label(v,"N E O N   D I S T R I C T",13,Color("6fe0b8"));_label(v,"NATIVE 0.5.2 ALPHA  ·  LOMBOK ISLAND",10,Color("7fa8a2"))
+ _sep(v)
+ _label(v,"Identitas lo.",22,Color("e2f0e7"))
+ _label(v,"NAMA WARGA",9,Color("6fe0b8"))
+ name_input=LineEdit.new();name_input.max_length=16;name_input.text=str(app.prefs.data.nickname);name_input.placeholder_text="Nama panggilan";name_input.custom_minimum_size=Vector2(0,40);v.add_child(name_input)
+ _label(v,"PILIH LOOK",9,Color("6fe0b8"))
+ var grid=GridContainer.new();grid.columns=3;grid.add_theme_constant_override("h_separation",8);grid.add_theme_constant_override("v_separation",8);v.add_child(grid)
  for i in range(6):
-  var id=i;_button(grid,["Raka","Kai","Atlas","Naya","Luna","Asha"][i],func():app.set_look(id))
- var online=_button(v,"MASUK DISTRIK ONLINE  →",func():app.start_game(true));online.modulate=Color("c2e0b1");start_buttons.append(online)
- start_buttons.append(_button(v,"PROVING GROUND · offline",func():app.start_game(false)))
- _button(v,"VAULT · simpan / pakai look",func():vault_panel.visible=not vault_panel.visible)
- _label(v,"Geser karakter di kanan untuk muter 360°.",10,Color("8fb2ad"))
+  var id=i;var chip=_button(grid,["RAKA","KAI","ATLAS","NAYA","LUNA","ASHA"][i],func():app.set_look(id));chip.custom_minimum_size=Vector2(0,38)
+ _sep(v)
+ var online=_button(v,"▶  MASUK DISTRIK ONLINE",func():app.start_game(true),"ui_confirm")
+ online.modulate=Color("d9ffe8");online.custom_minimum_size=Vector2(0,50);start_buttons.append(online)
+ start_buttons.append(_button(v,"PROVING GROUND  ·  OFFLINE",func():app.start_game(false),"ui_confirm"))
+ _button(v,"VAULT  ·  SIMPAN / PAKAI LOOK",func():vault_panel.visible=not vault_panel.visible)
+ _label(v,"Geser karakter di kanan untuk muter 360°.",10,Color("7fa8a2"))
+ _sep(v)
+ _label(v,"KUALITAS GRAFIS",9,Color("6fe0b8"))
  var q=_quality_selector();v.add_child(q)
- _label(v,"Optimasi anti-crash tetap aktif: render bertahap, mobil dekat saja, dan quality AUTO aman untuk RAM kecil.",11,Color("8fb2ad"))
- _label(v,"WASD gerak · Shift lari · F kendaraan\nMouse kamera · RMB bidik · G GPS · Esc menu",11)
+ _label(v,"Optimasi anti-crash tetap aktif: render bertahap, mobil dekat saja, dan quality AUTO aman untuk RAM kecil.",10,Color("7fa8a2"))
+ _label(v,"WASD gerak · Shift lari · F kendaraan\nMouse kamera · RMB bidik · G GPS · Esc menu",10,Color("9fc4bd"))
  _button(v,"Diagnostik / salin laporan",func():app.copy_diagnostics());_button(v,"Tentang / lisensi",show_credits)
- _label(v,"Native alpha: online masih server planar. Peta Lombok penuh menyusul; shell pulau sudah aktif.",10,Color("b8b592"))
+ _label(v,"Online masih server planar. Peta Lombok penuh menyusul; shell pulau sudah aktif.",9,Color("8c9a86"))
+func _sep(parent):
+ var h=HSeparator.new();parent.add_child(h)
 func _quality_selector():
  var q=OptionButton.new();q.add_item("AUTO · mulai aman");q.add_item("SAFE · hemat GPU");q.add_item("BALANCED");q.add_item("HIGH · pilih manual");q.select(int(app.prefs.data.quality)+1);q.item_selected.connect(func(i):app.set_quality(i-1));return q
 func _hud():
@@ -135,19 +157,24 @@ func _gps():
  var scroll=ScrollContainer.new();scroll.custom_minimum_size=Vector2(385,405);v.add_child(scroll);var list=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
  for p in app.world.data.map.pois:
   var point=p;_button(list,str(p.name),func():app.navigate_to(point);gps_panel.visible=false;app.paused=false;touch.visible=touch.enabled)
- _button(v,"Tutup",func():gps_panel.visible=false;app.paused=false;touch.visible=touch.enabled);gps_panel.visible=false
+ _button(v,"Tutup",func():gps_panel.visible=false;app.paused=false;touch.visible=touch.enabled,"ui_back");gps_panel.visible=false
 func _chat():
  chat_panel=_panel(Vector2(18,390),Vector2(370,200));var v=VBoxContainer.new();chat_panel.add_child(v)
  chat_log=RichTextLabel.new();chat_log.bbcode_enabled=false;chat_log.custom_minimum_size=Vector2(330,120);chat_log.scroll_following=true;chat_log.add_theme_font_size_override("normal_font_size",12);v.add_child(chat_log)
  chat_input=LineEdit.new();chat_input.max_length=200;chat_input.placeholder_text="Pesan / Enter";chat_input.text_submitted.connect(func(text):app.send_chat(text);chat_input.clear();chat_input.release_focus();chat_panel.visible=false;touch.visible=touch.enabled and not app.paused);v.add_child(chat_input);chat_panel.visible=false
 func _loading():
  loading_view=Control.new();loading_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.mouse_filter=Control.MOUSE_FILTER_STOP;root.add_child(loading_view)
- var background=ColorRect.new();background.color=Color("07111f");background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.add_child(background)
- var v=VBoxContainer.new();v.position=Vector2(390,280);v.custom_minimum_size=Vector2(500,0);v.add_theme_constant_override("separation",15);loading_view.add_child(v)
- _label(v,"VEYRA / LOMBOK LOADER",25,Color("d9f1de"));loading_label=_label(v,"Menyiapkan distrik…",13,Color("8ba9b6"))
- loading_bar=ProgressBar.new();loading_bar.max_value=1;loading_bar.show_percentage=false;loading_bar.custom_minimum_size=Vector2(500,5)
- var fill=StyleBoxFlat.new();fill.bg_color=Color("a5d4b3");fill.set_corner_radius_all(3);loading_bar.add_theme_stylebox_override("fill",fill);v.add_child(loading_bar)
- _label(v,"Memuat bertahap. Jangan hapus data aplikasi untuk update.",10,Color("7ba09c"));loading_view.visible=false
+ var art=TextureRect.new();art.texture=load("res://assets/boot_splash.png");art.expand_mode=TextureRect.EXPAND_IGNORE_SIZE;art.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_COVERED;art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.add_child(art)
+ var shade=ColorRect.new();shade.color=Color(2,6,11,.62);shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);loading_view.add_child(shade)
+ var stack=VBoxContainer.new();stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);stack.alignment=BoxContainer.ALIGNMENT_CENTER;stack.add_theme_constant_override("separation",14);loading_view.add_child(stack)
+ var t1=_label(stack,"VEYRA",58,Color("eef5e8"));t1.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+ var t2=_label(stack,"N E O N   D I S T R I C T",13,Color("6fe0b8"));t2.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+ loading_label=_label(stack,"Menyiapkan distrik…",13,Color("c4ddd8"));loading_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+ var bar_wrap=VBoxContainer.new();bar_wrap.custom_minimum_size=Vector2(420,0);bar_wrap.size_flags_horizontal=Control.SIZE_SHRINK_CENTER;stack.add_child(bar_wrap)
+ loading_bar=ProgressBar.new();loading_bar.max_value=1;loading_bar.show_percentage=false;loading_bar.custom_minimum_size=Vector2(420,8)
+ var fill=StyleBoxFlat.new();fill.bg_color=Color("6fe0b8");fill.set_corner_radius_all(4);loading_bar.add_theme_stylebox_override("fill",fill)
+ var bg=StyleBoxFlat.new();bg.bg_color=Color(9,20,28,.85);bg.set_corner_radius_all(4);loading_bar.add_theme_stylebox_override("background",bg);bar_wrap.add_child(loading_bar)
+ var tip=_label(stack,"Tips: tekan F buat masuk kendaraan, G buat GPS.",10,Color("9fc4bd"));tip.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 func set_loading(value,progress,text):
  busy=value;loading_view.visible=value;loading_bar.value=progress;loading_label.text=text
  for b in start_buttons:b.disabled=value
@@ -162,7 +189,7 @@ func _layout():
  margins=Vector4(left,right,18,bottom)
  if touch:touch.set_insets(left-18,right-18,bottom-18)
  if hud_canvas:hud_canvas.insets=margins
- if loading_view and loading_view.get_child_count()>1:loading_view.get_child(1).position=Vector2(view.x*.5-250,view.y*.5-60)
+ 
  status_label.position=Vector2(left,22);status_label.size=Vector2(320,20)
  stats_label.position=Vector2(left,46);stats_label.size=Vector2(300,36)
  var mobile=touch.enabled if touch else OS.has_feature("mobile")

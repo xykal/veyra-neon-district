@@ -50,11 +50,42 @@ func start_loop(key,name,point,volume=-18.0):
 func stop_loop(key):
  if loops.has(key):loops[key].stop();loops[key].stream=null;loops[key].queue_free();loops.erase(key)
 func engine(key,point,speed,throttle,active):
- if not active:stop_loop(key);return
- var p=start_loop(key,"engine_idle",point,-13)
- if p:p.global_position=point;p.pitch_scale=clampf(.85+absf(speed)*.065+absf(throttle)*.3,.8,3.5);p.volume_db=-18+absf(throttle)*5+minf(absf(speed),35)*.12
+ if not active:
+  if loops.has(key):play_at("engine_stop",point,-9)
+  stop_loop(key);return
+ var src="engine_idle"
+ if absf(speed)>12.0:src="engine_high"
+ elif absf(speed)>4.5:src="engine_mid"
+ if not loops.has(key) or loops[key].get_meta("src","")!=src:
+  stop_loop(key)
+  var p=start_loop(key,src,point,-13)
+  if p:p.set_meta("src",src)
+ var player=loops.get(key)
+ if player:
+  player.global_position=point
+  player.pitch_scale=clampf(.85+absf(speed)*.045+absf(throttle)*.22,.85,2.6)
+  player.volume_db=-18+absf(throttle)*5+minf(absf(speed),35)*.12
 func engine_start(key,point):
  play_at("engine_start",point,-7)
+func siren(key,point,active):
+ if active:
+  if not loops.has(key):start_loop(key,"siren",point,-16)
+  elif loops[key]:loops[key].global_position=point
+ else:stop_loop(key)
+func rain(point,active):
+ if active:
+  if not loops.has("weather_rain"):start_loop("weather_rain","rain",point,-26)
+  elif loops["weather_rain"]:loops["weather_rain"].global_position=point
+ else:stop_loop("weather_rain")
+func thunder(point):
+ play_at("thunder",point,-8,randf_range(.9,1.05))
+func cloth(point):
+ play_at("cloth",point,-16,randf_range(.92,1.1))
+func wind_fast(point,active):
+ if active:
+  if not loops.has("wind_fast"):start_loop("wind_fast","wind_high",point,-20)
+  elif loops["wind_fast"]:loops["wind_fast"].global_position=point
+ else:stop_loop("wind_fast")
 func set_ambient(point,mode="coast"):
  if mode=="coast":
   start_loop("ambient_ocean","ocean",point,-30)

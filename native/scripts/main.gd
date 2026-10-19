@@ -40,6 +40,10 @@ var destination=null
 var route_node=null
 var job_point=Vector3.ZERO
 var last_local_shot=-1000.0
+var weather_timer=0.0
+var rainy=false
+var thunder_timer=0.0
+var cloth_timer=0.0
 var boot_time=0.0
 var native_checks=0
 var native_failures=0
@@ -95,7 +99,7 @@ func _ready():
  elif "--online-test" in OS.get_cmdline_user_args():call_deferred("_online_test")
  elif demo_capture:call_deferred("start_game",false)
  if capture_path!="":call_deferred("_capture")
- print("VEYRA_NATIVE_READY version=0.5.1-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/38-sfx/lombok-shell; world=",world.data.seed)
+ print("VEYRA_NATIVE_READY version=0.5.2-alpha.1 renderer=",RenderingServer.get_video_adapter_name()," tier=",quality," assets=20-clips/65-bones/38-sfx/lombok-shell; world=",world.data.seed)
 func _preview():
  preview=Citizen.new();add_child(preview);preview.position=Vector3(-40,0,-40);preview.rotation.y=preview_yaw;preview.setup(int(prefs.data.look),quality)
  pedestal=MeshInstance3D.new();var disk=CylinderMesh.new();disk.top_radius=2.2;disk.bottom_radius=2.3;disk.height=.12;disk.radial_segments=48;pedestal.mesh=disk;var mat=StandardMaterial3D.new();mat.albedo_color=Color("1b3e46");mat.roughness=.55;mat.metallic=.25;pedestal.material_override=mat;pedestal.position=preview.position-Vector3.UP*.07;add_child(pedestal)
@@ -258,7 +262,10 @@ func _process(delta):
  if player.driving:
   if not online:player.driving.set_drive(-move.y,move.x,player.controls.jump)
   audio_node.engine("player-engine",player.driving.global_position,player.driving.speed_mps,-move.y,true)
- else:audio_node.stop_loop("player-engine")
+  audio_node.wind_fast(player.driving.global_position,absf(player.driving.speed_mps)>17.0)
+ else:
+  audio_node.stop_loop("player-engine");audio_node.wind_fast(Vector3.ZERO,false)
+ _weather(delta)
  if audio_node.loops.has("ambient"):audio_node.loops.ambient.global_position=player.global_position
  input_clock+=delta
  if online and network.welcomed and input_clock>=1.0/30:input_clock=0;network.input(player.input_packet())
@@ -298,6 +305,7 @@ func _candidate():
  return best
 func interact():
  if not playing or paused:return
+ if player and player.avatar and not player.avatar.ragdoll:player.avatar.play_motion("Interact",1.25)
  if online:
   if not network.welcomed:ui.notify("Tunggu koneksi server.");return
   if player.driving:network.send({"t":"exit"})
@@ -318,6 +326,19 @@ func manual_ragdoll():
  if player.driving:ui.notify("Turun dulu untuk mencoba ragdoll.");return
  if player.avatar.ragdoll:player.recover()
  else:player.knockdown(player.velocity+Vector3(cos(player.facing),1,sin(player.facing))*2.5)
+func _weather(delta):
+ if not playing or paused or player==null:return
+ weather_timer-=delta
+ if weather_timer<=0:
+  rainy=not rainy
+  weather_timer=42.0+randf()*70.0 if not rainy else 26.0+randf()*30.0
+  thunder_timer=4.0+randf()*10.0
+ audio_node.rain(player.global_position,rainy)
+ if rainy:
+  thunder_timer-=delta
+  if thunder_timer<=0:
+   audio_node.thunder(player.global_position+Vector3(randf_range(-60,60),0,randf_range(-60,60)))
+   thunder_timer=18.0+randf()*38.0
 func horn():
  if not playing:return
  if online:network.send({"t":"horn"})
@@ -328,6 +349,18 @@ func reset_car():
  if c:c.freeze=false;c.reset_upright();ui.notify("Kendaraan ditegakkan kembali.")
 func shoot():
  if fire_clock>0 or not playing or player.driving or player.avatar.ragdoll:return
+ if not player.controls.aim and not online:
+  fire_clock=.55
+  player.avatar.play_motion("Interact",1.6)
+  audio_node.punch(player.global_position)
+  var camera=player.camera;var start=camera.global_position;var end=start-camera.global_basis.z*2.1
+  var query=PhysicsRayQueryParameters3D.create(start,end,1|2|16);query.exclude=[player.get_rid()];query.collide_with_areas=true
+  var punch_hit=get_world_3d().direct_space_state.intersect_ray(query)
+  if not punch_hit.is_empty() and punch_hit.collider.has_meta("citizen"):
+   var pa=punch_hit.collider.get_meta("citizen");var ps=punch_hit.collider.get_meta("body_shape")
+   _ragdoll_actor(pa,ps,-camera.global_basis.z*2.2)
+   audio_node.play_at("ragdoll_hit",punch_hit.position,-8)
+  return
  fire_clock=.28;last_local_shot=Time.get_ticks_msec()/1000.0;player.avatar.fire_animation()
  var camera=player.camera;var start=camera.global_position;var end=start-camera.global_basis.z*62;var query=PhysicsRayQueryParameters3D.create(start,end,1|2|16);query.exclude=[player.get_rid()];query.collide_with_areas=true;var hit=get_world_3d().direct_space_state.intersect_ray(query)
  if not hit.is_empty():end=hit.position;effects.impact(end,hit.normal,"metal")
@@ -483,7 +516,7 @@ func _check(value,label):
  if not value:native_failures+=1;push_error("NATIVE_ASSERT_FAILED "+label)
 
 func diagnostic_data():
- return {"app":"Veyra Native","version":"0.5.1-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
+ return {"app":"Veyra Native","version":"0.5.2-alpha.1","stage":load_stage,"os":OS.get_name(),"device":OS.get_model_name(),"renderer":RenderingServer.get_video_adapter_name(),"adapter":RenderingServer.get_video_adapter_vendor(),"quality":quality,"render_scale":get_viewport().scaling_3d_scale,"fps":Engine.get_frames_per_second(),"frame_ms_estimate":1000.0/maxf(1,average_fps),"static_memory_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0,"video_memory_mb":Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0,"nodes":int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),"draw_calls":int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),"vehicles":vehicles.size(),"pending_vehicles":network_vehicle_pending.size(),"practice_actors":npcs.size(),"world_batches":world.batch_nodes.size(),"memory_warnings":memory_warnings,"menu_ready_ms":startup_to_menu_ms,"online":online,"previous_session":previous_session,"os_memory":OS.get_memory_info()}
 func _record_diagnostics(stage):
  load_stage=stage
  var file=FileAccess.open("user://diagnostics.json",FileAccess.WRITE)

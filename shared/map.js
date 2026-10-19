@@ -22,10 +22,10 @@ export const COLORS = {
 };
 
 const BUILDING_COLORS = [
-  '#7a6a58', '#6e7a86', '#8a6f6f', '#5f6b5f', '#7d7466',
-  '#5c5f70', '#8b8172', '#6b5b6b', '#747a72', '#8a7a63',
+  '#c9704f', '#e0b25c', '#5f9e86', '#c46a5a', '#7ba7c9',
+  '#d9c9a3', '#a35b7a', '#4f8f6b', '#e29a5b', '#8b7fc4',
 ];
-const ROOF_COLORS = ['#3a3a40', '#45464d', '#33343a', '#4a4b52', '#2f3036'];
+const ROOF_COLORS = ['#4a3f42', '#5a4640', '#3d444c', '#6b4a3a', '#37424a', '#8a4f3c'];
 const SHOP_COLORS = ['#9b4a3f', '#3f6b9b', '#4f9b63', '#9b8b3f', '#6b3f9b', '#3f9b9b'];
 
 /** PRNG sederhana & deterministik */
@@ -128,7 +128,7 @@ export function buildMap(seed = 20251018) {
           const ty = iy + 18 + rnd() * (ih - 36);
           // jangan taruh pohon di jalur
           const onPath = Math.abs(tx - (ix + iw / 2)) < 22 || Math.abs(ty - (iy + ih / 2)) < 22;
-          if (!onPath) trees.push({ x: tx, y: ty, r: 12 + rnd() * 9, tone: pick(rnd, ['#1f4a26', '#2a5c2f', '#183d20']) });
+          if (!onPath) trees.push({ x: tx, y: ty, r: 12 + rnd() * 9, tone: pick(rnd, ['#3f8a3c', '#4c9a45', '#2f7a38']) });
         }
         // bangku
         for (let b = 0; b < 4; b++) {
@@ -217,11 +217,11 @@ export function buildMap(seed = 20251018) {
     if (rnd() < 0.5) {
       const x = onRoadLine * CELL + side * off;
       const y = along;
-      if (!inWater(x, y, water)) trees.push({ x, y, r: 9 + rnd() * 5, tone: pick(rnd, ['#24512b', '#2b5f32']) });
+      if (!inWater(x, y, water)) trees.push({ x, y, r: 9 + rnd() * 5, tone: pick(rnd, ['#47924a', '#559e42']) });
     } else {
       const x = along;
       const y = onRoadLine * CELL + side * off;
-      if (!inWater(x, y, water)) trees.push({ x, y, r: 9 + rnd() * 5, tone: pick(rnd, ['#24512b', '#2b5f32']) });
+      if (!inWater(x, y, water)) trees.push({ x, y, r: 9 + rnd() * 5, tone: pick(rnd, ['#47924a', '#559e42']) });
     }
   }
 

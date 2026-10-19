@@ -72,12 +72,16 @@ func _physics_process(delta):
    velocity.y-=9.81*delta;air_time+=delta;landing_ready=true
   elif controls.jump and not jump_latch and not online:
    velocity.y=5.15;floor_snap_length=0;air_time=0
-   if audio_node:audio_node.jump(global_position)
+   if audio_node:
+    audio_node.jump(global_position)
+    audio_node.cloth(global_position)
+   if avatar:avatar.play_motion("Jump_Start",1.1)
   else:
    floor_snap_length=.3;velocity.y=-.1
    if landing_ready and not was_on_floor:
     landing_ready=false
     if audio_node:audio_node.land(global_position,1.0+minf(air_time*1.6,1.8))
+    if avatar:avatar.play_motion("Jump_Land",1.15)
    air_time=0
   was_on_floor=on_floor
   jump_latch=controls.jump
@@ -119,7 +123,9 @@ func authoritative(p):
  var server=Vector3(float(p.x)/10,global_position.y,float(p.y)/10);var error=Vector2(server.x-global_position.x,server.z-global_position.z)
  if error.length()>3:global_position=server
  else:global_position.x+=error.x*.35;global_position.z+=error.y*.35
- health=float(p.h)
+ var new_health=float(p.h)
+ if new_health<health-0.5 and avatar and not avatar.ragdoll:avatar.play_motion("Hit_Chest",1.2)
+ health=new_health
  if int(p.d)==1:
   if not avatar.ragdoll:external_dead=true;knockdown(Vector3(float(p.get("vx",0))/10,0,float(p.get("vy",0))/10))
  else:

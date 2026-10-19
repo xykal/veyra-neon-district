@@ -30,11 +30,13 @@ static var templates={}
 var impact_cooldown=0.0
 var engine_started=false
 var skid_state=false
+var brake_sfx_timer=0.0
+var siren_state=false
 var net_seen=false
 var net_target=Vector3.ZERO
 var net_yaw=0.0
-const FILES={"sedan":"sedan","sport":"sport","truck":"pickup","police":"police","taxi":"taxi","van":"van","bus":"bus","ambulance":"ambulance","firetruck":"firetruck","garbage":"garbage-truck","delivery":"delivery","suv":"suv","luxury":"suv-luxury","supercar":"race","kart":"kart-ooli","shovel":"tractor-shovel","tractor":"tractor"}
-const ROTATED=["taxi","ambulance","firetruck","garbage","delivery","suv","luxury","supercar","kart","shovel"]
+const FILES={"sedan":"sedan","sport":"sport","truck":"pickup","police":"police","taxi":"taxi","van":"van","bus":"bus","ambulance":"ambulance","firetruck":"firetruck","garbage":"garbage-truck","delivery":"delivery","suv":"suv","luxury":"suv-luxury","supercar":"race","kart":"kart-ooli","shovel":"tractor-shovel","tractor":"tractor","motorbike":"motorbike"}
+const ROTATED=[]  # Blender kits (native-blender-cars.py) are modeled along +X already
 static func clear_template_cache():templates.clear()
 func configure(record,types,tier=0,audio=null):
  vehicle_id=int(record.id);kind=str(record.type);definition=types.get(kind,types.sedan);length_m=float(definition.len)/10.0;width_m=float(definition.wid)/10.0
@@ -66,7 +68,7 @@ func _load_model(tier):
  if kind in ROTATED:model.rotation.y=PI/2
  model.force_update_transform()
  var box=_bounds(model);var size=box.size;model.position-=Vector3(box.position.x+size.x/2,box.position.y,box.position.z+size.z/2)
- visual.scale=Vector3(length_m/maxf(.01,size.x),length_m/maxf(.01,size.x),width_m/maxf(.01,size.z));height_m=size.y*visual.scale.y
+ var vscale=length_m/maxf(.01,size.x);visual.scale=Vector3(vscale,vscale,vscale);height_m=size.y*vscale
  var paint=_finish("paint:"+kind,0.72,0.24,Color(PAINTS.get(kind,"274b78")))
  var glass=_finish("glass",0,0)
  var rubber=_finish("rubber",0.0,0.92,Color("101216"))
@@ -84,7 +86,7 @@ func _load_model(tier):
    elif "trim" in nm or "bumper" in nm:node.material_override=chrome
    else:node.material_override=paint
    if "wheel" in nm:wheel_nodes.append({"node":node,"rest":node.quaternion,"front":"front" in nm,"spin":0.0})
- _add_car_details(paint,glass,headlight,taillight,chrome)
+ if false:_add_car_details(paint,glass,headlight,taillight,chrome)  # Blender kits carry real details
 func _add_car_details(paint,glass,headlight,taillight,chrome):
  # Silhouette/detail pass on an unscaled node: visual.scale double-applies otherwise.
  var details=Node3D.new();add_child(details)
@@ -152,8 +154,17 @@ func _physics_process(delta):
  if audio_node and slip>.35:
   if not skid_state:skid_state=true;audio_node.play_at("skid",global_position,-14,randf_range(.95,1.05))
  elif skid_state:skid_state=false
+ if audio_node:
+  brake_sfx_timer=maxf(0,brake_sfx_timer-delta)
+  if braking and absf(speed_mps)>7 and brake_sfx_timer<=0:
+   brake_sfx_timer=1.6;audio_node.brake(global_position,minf(absf(speed_mps)/12.0,1.2))
+  var emergency=kind=="police" and absf(speed_mps)>2.2
+  if emergency!=siren_state:
+   siren_state=emergency;audio_node.siren("siren_"+str(vehicle_id),global_position,emergency)
  apply_central_force(-linear_velocity*linear_velocity.length()*.45)
  _animate_wheels(delta)
+func _exit_tree():
+ if audio_node:audio_node.siren("siren_"+str(vehicle_id),global_position,false)
 func _animate_wheels(delta):
  if absf(speed_mps)<.015 and absf(steering)<.015:return
  wheel_spin-=speed_mps*delta/.34
