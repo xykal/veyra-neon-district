@@ -1,13 +1,23 @@
-# Veyra Native — 0.5.4-alpha.1
+# Veyra Native — 0.5.4-alpha.2
 
 A **real Godot 4.7.2 native client** for Windows x64 and Android ARM64/ARMv7. This is not Electron, a browser shell, WebView, Unity, FiveM or GTA V. GDScript drives the native C++ engine, OpenGL-compatible renderer and Jolt physics.
 
-**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.4-alpha.1)
+**Download:** [native alpha release](https://github.com/xykal/veyra-neon-district/releases/tag/native-v0.5.4-alpha.2)
 
 - `VeyraNative-Windows-x64.zip` — extract and run `VeyraNative.exe`; no .NET runtime required.
 - `VeyraNative-Android-arm64.apk` — recommended for modern 64-bit Android phones.
 - `VeyraNative-Android-armv7.apk` — legacy 32-bit ARM option, provided the device supports the required Android/OpenGL features.
 - `SHA256SUMS.txt` — verify package integrity. The APKs use a persistent private release-signing key; Windows code signing is **not** configured. An unsigned Windows build may be flagged as an unfamiliar application; the APK is not a Play Store release.
+
+## 0.5.4-alpha.2 — cloth physics, real fabric textures, per-file structure
+
+FiveM-style clothing pass, the request that mattered most:
+
+- **Cloth dynamics** (`scripts/cloth_spring.gd`): hood, backpack, chest chain, jacket shell, cap and hair now swing with velocity, bank into turns and sag under gravity — damped-spring motion driven by the locomotion state, zero physics-server cost.
+- **Real fabric textures (CC0)**: tops/cap/hood/jacket get a woven-fabric albedo+normal (triplanar), pants a denim weave, the backpack leather. No more flat-color clothing — texture reads at any distance.
+- **Wear clip-through fixed**: pants grow amount raised so the leg mesh never pokes through the baggy silhouette at the knees.
+- **Structure**: `ui_look_stage.gd` extracted as its own module (ui.gd shrinks to orchestration); cloth springs live in `cloth_spring.gd`. Modular per-file direction continues.
+- **QA gate**: `native-visual-audit.py` ran pre-release and caught a reparenting crash (29 log errors) and the knee poke-through before they shipped. Green: 7/7 scenes, 0 errors, suite pass.
 
 ## 0.5.4-alpha.1 — the realism pass: PBR world, sky, lighting, visual QA
 
