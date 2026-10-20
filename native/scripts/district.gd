@@ -44,6 +44,10 @@ func _generate(incremental,progress):
  _island_scenery();_airport();_progress(progress,.16,"Menanam pantai, sawah, dan warung")
  if incremental:await get_tree().process_frame
  var facade=ShaderMaterial.new();facade.shader=load("res://assets/shaders/facade.gdshader")
+ var fbn=load("res://assets/textures/brick/albedo.jpg");if fbn:facade.set_shader_parameter("brick_c",fbn)
+ fbn=load("res://assets/textures/brick/normal.jpg");if fbn:facade.set_shader_parameter("brick_n",fbn)
+ fbn=load("res://assets/textures/concrete/albedo.jpg");if fbn:facade.set_shader_parameter("concrete_c",fbn)
+ fbn=load("res://assets/textures/concrete/normal.jpg");if fbn:facade.set_shader_parameter("concrete_n",fbn)
  var total=m.buildings.size()
  for i in range(total):
   var b=m.buildings[i];var h=maxf(1.4,float(b.height)*.8);var pos=Vector3((b.x+b.w/2)/10,h/2,(b.y+b.h/2)/10);var size=Vector3(b.w/10.0,h,b.h/10.0)
@@ -152,6 +156,13 @@ func _terrain():
  var arrays=[];arrays.resize(Mesh.ARRAY_MAX);arrays[Mesh.ARRAY_VERTEX]=verts;arrays[Mesh.ARRAY_NORMAL]=norms;arrays[Mesh.ARRAY_TEX_UV]=uvs;arrays[Mesh.ARRAY_INDEX]=indices
  var mesh=ArrayMesh.new();mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays);geometry.mesh=mesh
  var mat=ShaderMaterial.new();mat.shader=load("res://assets/shaders/terrain.gdshader");mat.set_shader_parameter("flat_radius",float(island.get("flatRadius",250.0)));mat.set_shader_parameter("world_center",Vector2(world_size/2,world_size/2));mat.set_shader_parameter("world_size",world_size)
+ var tex_dir=["grass","rock","sand","asphalt","concrete"]
+ for tn in tex_dir:
+  var albedo=load("res://assets/textures/"+tn+"/albedo.jpg")
+  if albedo:mat.set_shader_parameter(tn+"_c",albedo)
+  var rgh=load("res://assets/textures/"+tn+"/rough.jpg")
+  if rgh:mat.set_shader_parameter(tn+"_r",rgh)
+ mat.set_shader_parameter("detail_far",90.0 if quality==0 else 150.0)
  var mask_img=load("res://assets/city_mask.png")
  if mask_img:mat.set_shader_parameter("map_tex",mask_img)
  var image=Image.create_empty(64,64,false,Image.FORMAT_RGB8);var rng=RandomNumberGenerator.new();rng.seed=192040
@@ -258,8 +269,27 @@ func _island_scenery():
    _batch(p+offset+Vector3(0,1.1,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.4,2.2,2.0)),_unit("box"),wood,"hut",Color("b7895f").lightened(.02))
    _batch(p+offset+Vector3(0,2.55,0),Basis(Vector3.UP,yaw+k).scaled(Vector3(2.9,.22,2.6)),_unit("box"),thatch,"roof",Color("77502f"))
 func _setup_environment():
- environment=WorldEnvironment.new();var e=Environment.new();var sky=Sky.new();var sm=ProceduralSkyMaterial.new();sm.sky_top_color=Color("2b62a8");sm.sky_horizon_color=Color("e8c894");sm.ground_bottom_color=Color("243238");sm.ground_horizon_color=Color("b7a68c");sky.sky_material=sm;e.sky=sky;e.background_mode=Environment.BG_SKY;e.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;e.ambient_light_color=Color("b8c4cf");e.ambient_light_energy=.54;e.tonemap_mode=Environment.TONE_MAPPER_FILMIC;e.fog_enabled=quality>0;e.fog_light_color=Color("cdd2c8");e.fog_density=.0007;e.fog_sky_affect=.12;environment.environment=e;add_child(environment)
- sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-42,-28,0);sun.light_color=Color("fff2df");sun.light_energy=1.06;sun.shadow_enabled=quality>0;sun.directional_shadow_max_distance=45 if quality==1 else 75;add_child(sun)
+ environment=WorldEnvironment.new();var e=Environment.new()
+ var sky=Sky.new();sky.radiance_size=Sky.RADIANCE_SIZE_128
+ var sm=ShaderMaterial.new();sm.shader=load("res://assets/shaders/sky.gdshader")
+ var sun_basis=Basis.from_euler(Vector3(deg_to_rad(-54),deg_to_rad(-38),0))
+ sm.set_shader_parameter("sun_dir",sun_basis*Vector3(0,-1,0))
+ sky.sky_material=sm;e.sky=sky
+ e.background_mode=Environment.BG_SKY
+ e.ambient_light_source=Environment.AMBIENT_SOURCE_SKY;e.ambient_light_energy=1.85
+ e.reflected_light_source=Environment.REFLECTION_SOURCE_SKY
+ e.tonemap_mode=Environment.TONE_MAPPER_ACES;e.tonemap_exposure=1.2;e.tonemap_white=7.0
+ e.adjustment_enabled=true;e.adjustment_saturation=1.08;e.adjustment_contrast=1.02;e.adjustment_brightness=1.03
+ e.fog_enabled=quality>0;e.fog_light_color=Color("e4d9c6");e.fog_density=.0011;e.fog_sky_affect=.16
+ if quality>=1:
+  e.ssao_enabled=true;e.ssao_radius=1.1;e.ssao_intensity=1.05;e.ssao_power=1.15;e.ssao_detail=.3
+  e.glow_enabled=true;e.glow_intensity=.28;e.glow_strength=.7;e.glow_bloom=.04;e.glow_hdr_threshold=1.05;e.glow_blend_mode=Environment.GLOW_BLEND_MODE_ADDITIVE
+  e.volumetric_fog_enabled=false
+ environment.environment=e;add_child(environment)
+ sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-54,-38,0);sun.light_color=Color("fff1da");sun.light_energy=1.55;sun.light_angular_distance=.8;sun.shadow_enabled=quality>0
+ sun.directional_shadow_max_distance=70 if quality==1 else 120;sun.directional_shadow_split_1=.06;sun.directional_shadow_split_2=.18;sun.shadow_bias=.12;sun.shadow_blur=1.6;sun.directional_shadow_pancake_size=4.0
+ add_child(sun)
+ var fill=DirectionalLight3D.new();fill.rotation_degrees=Vector3(38,142,0);fill.light_color=Color("c8d6e8");fill.light_energy=.52;fill.light_angular_distance=1.2;fill.shadow_enabled=false;add_child(fill)
 func _standard(metal=0.0,rough=.8,emission=Color.BLACK):
  var key=str(metal)+":"+str(rough)+":"+emission.to_html()
  if material_cache.has(key):return material_cache[key]
@@ -281,9 +311,14 @@ func _collision_box(pos,size,yaw=0.0):
 func _tree(t,trunk,leaves):
  var p=Vector3(t.x/10.0,0,t.y/10.0);var r=float(t.r)/10;var height=r*2.2
  _cylinder(p+Vector3(0,height/2,0),r*.18,height,trunk,"trunks",Color("594737"));_collision_box(p+Vector3(0,height/2,0),Vector3(r*.36,height,r*.36))
- for k in range(3 if quality==0 else 6):
-  var angle=k*2.39;var at=p+Vector3(cos(angle)*r*.5,height+r*.55+(k%3)*r*.28,sin(angle)*r*.5)
-  _batch(at,Basis.IDENTITY.scaled(Vector3(r*.7,r*.8,r*.7)),_unit("sphere"),leaves,"leaves",Color(t.tone).lightened(.1+(k%3)*.025))
+ var base=Color(t.tone)
+ for k in range(3 if quality==0 else 7):
+  var angle=k*2.39;var layer=k%3
+  var at=p+Vector3(cos(angle)*r*.52,height+r*.62+layer*r*.3,sin(angle)*r*.52)
+  var tone=base.darkened(.10-layer*.06).lightened((k%2)*.04)
+  _batch(at,Basis.IDENTITY.scaled(Vector3(r*.86,r*.72,r*.86)),_unit("sphere"),leaves,"leaves",tone)
+ # underside shade ball for canopy depth
+ _batch(p+Vector3(0,height+r*.72,0),Basis.IDENTITY.scaled(Vector3(r*.66,r*.5,r*.66)),_unit("sphere"),leaves,"leaves",base.darkened(.22))
 func _batch(pos,basis,mesh,material,kind,color):
  var key=kind+"/"+str(material.get_instance_id())+"/"+str(floori(pos.x/CHUNK))+":"+str(floori(pos.z/CHUNK))
  if not batches.has(key):batches[key]={"mesh":mesh,"material":material,"items":[],"colors":[],"kind":kind,"origin":Vector3(floorf(pos.x/CHUNK)*CHUNK+CHUNK/2,0,floorf(pos.z/CHUNK)*CHUNK+CHUNK/2)}

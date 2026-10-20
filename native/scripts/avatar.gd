@@ -1,7 +1,7 @@
 extends Node3D
 
 const MODEL_PATHS=["res://assets/people/citizen_male.glb","res://assets/people/citizen_female.glb"]
-const COATS=[Color("456c65"),Color("ddd6c5"),Color("252c37"),Color("625985"),Color("a84c49"),Color("8c674c")]
+const COATS=[Color("3d4a2e"),Color("ddd6c5"),Color("252c37"),Color("625985"),Color("a84c49"),Color("8c674c")]
 var model:Node3D
 var skeleton:Skeleton3D
 var animator:AnimationPlayer
@@ -49,15 +49,39 @@ func setup(preset=0,quality=1):
    if long_top:node.visible=look!=1 and look!=4
    if short_pants:node.visible=look==4
    if long_pants:node.visible=look!=4
+   if "Boots" in node.name:
+    var bm=StandardMaterial3D.new();bm.albedo_color=Color("241b13");bm.roughness=.62
+    node.material_override=bm
+   if "HoodShell" in node.name or "TailShell" in node.name:
+    node.visible=false
    if short_top or long_top or short_pants or long_pants:
-    var m=StandardMaterial3D.new();m.albedo_color=COATS[look] if short_top or long_top else Color("263142");m.roughness=.86;m.grow=true;m.grow_amount=.024 if short_top or long_top else .006;node.material_override=m
+    var m=_fabric_mat(COATS[look] if short_top or long_top else Color("14171c"),"fabric" if short_top or long_top else "denim",.86)
+    m.grow=true;m.grow_amount=.010 if short_top or long_top else .008;node.material_override=m
  var shapes=[Vector3.ONE,Vector3.ONE*1.02,Vector3.ONE*1.05,Vector3.ONE,Vector3.ONE*.97,Vector3.ONE*1.03]
  model.scale=shapes[look]
  _add_hair()
  _add_weapon()
  _add_streetwear()
+ if skeleton.find_bone("cloth_hood_a")>=0:
+  var sh=ClothSpring.new();add_child(sh);sh.bind_bones(skeleton,"cloth_hood_a","cloth_hood_b",0.5);springs.append(sh)
+  var st=ClothSpring.new();add_child(st);st.bind_bones(skeleton,"cloth_tail_a","cloth_tail_b",0.42);springs.append(st)
  current="";play_motion("Idle_Loop")
  if animator:animator.seek(0,true)
+const ClothSpring=preload("res://scripts/cloth_spring.gd")
+var springs=[]
+func _fabric_mat(color,tex_dir,rough=.85):
+ var m=StandardMaterial3D.new();m.albedo_color=color;m.roughness=rough
+ var alb=load("res://assets/textures/"+tex_dir+"/albedo.jpg")
+ if alb:
+  m.albedo_texture=alb;m.uv1_triplanar=true;m.uv1_scale=Vector3(6.5,6.5,6.5)
+  var nrm=load("res://assets/textures/"+tex_dir+"/normal.jpg")
+  if nrm:m.normal_enabled=true;m.normal_texture=nrm;m.normal_scale=.28
+ return m
+func _swing(attachment,piece,swing,tilt_amt,bob):
+ var spring=ClothSpring.new();attachment.add_child(spring)
+ if piece.get_parent():piece.get_parent().remove_child(piece)
+ spring.add_child(piece)
+ spring.configure(swing,tilt_amt,bob);springs.append(spring);return spring
 func _find(root,kind):
  if root.is_class(kind):return root
  for child in root.get_children():
@@ -75,40 +99,15 @@ func _add_hair():
  var attachment=BoneAttachment3D.new();attachment.bone_name="Head";skeleton.add_child(attachment)
  var names=["parted","buzz","buzz","long","buns","parted"]
  var hair=load("res://assets/people/hair_"+names[look]+".glb").instantiate();attachment.add_child(hair)
+ _swing(attachment,hair,.05,.42,.010)
  for node in _all(hair):
   if node is MeshInstance3D:
    for surface in range(node.mesh.get_surface_count()):
     var source=node.mesh.surface_get_material(surface);var m=source.duplicate() if source else StandardMaterial3D.new();m.albedo_color=Color("30231d") if look!=5 else Color("714c2e");m.roughness=.85;node.set_surface_override_material(surface,m)
-func _add_streetwear():
- if skeleton==null:return
- var metal=StandardMaterial3D.new();metal.albedo_color=Color("d8c27a");metal.metallic=.8;metal.roughness=.28
- var fabric=StandardMaterial3D.new();fabric.albedo_color=COATS[look].darkened(.10);fabric.roughness=.92
- var denim=StandardMaterial3D.new();denim.albedo_color=Color("2b3a52").lerp(COATS[look],.18);denim.roughness=.88
- # Quaternius bone frames: spine_03 +z = punggung, -z = dada. Offsets tuned per frame
- # so pieces sit ON the body — no floating patches, no clips through the legs.
- if skeleton.find_bone("Head")>=0:
-  var att_h=BoneAttachment3D.new();att_h.bone_name="Head";skeleton.add_child(att_h)
-  if look in [0,2,5]:
-   var cap=_wear_glb("cap",att_h,Vector3(0,.175,0),fabric,1.0);wear_nodes.append(cap)
- if skeleton.find_bone("spine_03")>=0:
-  var att=BoneAttachment3D.new();att.bone_name="spine_03";skeleton.add_child(att)
-  if look in [1,3,5]:
-   var bag=_wear_glb("bag",att,Vector3(0,.02,.17),denim,1.35);wear_nodes.append(bag)
-   var hood=_wear_glb("hood",att,Vector3(0,.17,.11),fabric,1.0);wear_nodes.append(hood)
-  if look in [2,3,4]:
-   var chain=_wear_glb("chain",att,Vector3(0,.155,-.13),metal,1.15);wear_nodes.append(chain)
-  if look in [2,5]:
-   var jacket=_wear_glb("jacket",att,Vector3(0,.02,-.01),fabric,1.08);wear_nodes.append(jacket)
-func _wear_glb(piece,attachment,offset,material,scale=1.0):
- var packed=load("res://assets/people/wear_"+piece+".glb")
- if packed==null:
-  return MeshInstance3D.new()
- var node=packed.instantiate();attachment.add_child(node);node.position=offset;node.scale=Vector3.ONE*scale
- for child in _all(node):
-  if child is MeshInstance3D:
-   child.material_override=material
-   child.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
- return node
+func _add_streetwear() -> void:
+    """Hair only — clothing is the skinned outfit now."""
+    pass
+
 func _add_weapon():
  if animator==null:return
  animator.play("Pistol_Aim_Neutral");animator.seek(.1,true);skeleton.force_update_all_bone_transforms()
@@ -150,6 +149,10 @@ func _process(delta):
   model.rotation.z=lerpf(model.rotation.z,sway+drive_bank,1-exp(-delta*5.0))
   model.rotation.y=lerpf(model.rotation.y,clampf(angular_lag,-.16,.16),1-exp(-delta*4.2))
   model.position.y=lerpf(model.position.y,bob+breath+land_dip,1-exp(-delta*6.5))
+  var vel_world=-global_transform.basis.z*motion_speed
+  var yaw_push=clampf(angular_lag*2.2,-3.0,3.0)
+  for spring in springs:
+   if is_instance_valid(spring):spring.push(vel_world,yaw_push,global_transform.basis)
 func _make_ragdoll():
  if ragdoll_prepared:return
  ragdoll_prepared=true
@@ -215,6 +218,9 @@ func stop_ragdoll():
  simulator.physical_bones_stop_simulation();ragdoll=false
  for b in physical:b.collision_layer=0;b.collision_mask=0
  for i in range(skeleton.get_bone_count()):skeleton.set_bone_pose_position(i,rest_positions[i]);skeleton.set_bone_pose_rotation(i,rest_rotations[i])
+ if skeleton.find_bone("cloth_hood_a")>=0:
+  var sh=ClothSpring.new();add_child(sh);sh.bind_bones(skeleton,"cloth_hood_a","cloth_hood_b",0.5);springs.append(sh)
+  var st=ClothSpring.new();add_child(st);st.bind_bones(skeleton,"cloth_tail_a","cloth_tail_b",0.42);springs.append(st)
  current="";play_motion("Idle_Loop")
 func body_position():
  if ragdoll and physical.size()>0:return physical[0].global_position
