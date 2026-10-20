@@ -49,14 +49,32 @@ func _generate(incremental,progress):
  fbn=load("res://assets/textures/concrete/albedo.jpg");if fbn:facade.set_shader_parameter("concrete_c",fbn)
  fbn=load("res://assets/textures/concrete/normal.jpg");if fbn:facade.set_shader_parameter("concrete_n",fbn)
  var total=m.buildings.size()
+ var kit=load("res://scripts/city_kit.gd").new();kit.setup(quality)
+ var nature=load("res://scripts/nature_kit.gd").new();nature.setup(quality,self)
  for i in range(total):
   var b=m.buildings[i];var h=maxf(1.4,float(b.height)*.8);var pos=Vector3((b.x+b.w/2)/10,h/2,(b.y+b.h/2)/10);var size=Vector3(b.w/10.0,h,b.h/10.0)
-  _box(pos,size,facade,"facade",Color(b.color).lightened(.045));_collision_box(pos,size)
+  var tint=Color(b.color).lightened(.045)
+  if kit.place(pos,size,tint):
+   nature.place_street_props(pos,size)
+  else:
+   _box(pos,size,facade,"facade",tint)
+  _collision_box(pos,size)
   if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.18+.30*float(i)/total,"Menyiapkan blok kota");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
+ kit.finalize(self)
+ var streets=load("res://scripts/street_kit.gd").new();streets.setup(self)
+ for gx in range(4,6):
+  for gz in range(4,6):
+   var ix=float(gx)*60.0;var iz=float(gz)*60.0
+   if Vector2(ix,iz).distance_to(Vector2(240,240))<=125.0:streets.place_intersection(ix,iz)
  var trunk=_standard(0,.95);var leaves=_standard(0,.95)
  for i in range(m.trees.size()):
-  _tree(m.trees[i],trunk,leaves)
+  var tr=m.trees[i];var tp=Vector3(tr.x/10.0,0,tr.y/10.0);var trr=float(tr.r)/10
+  if not nature.place_tree(tp,trr,Color(tr.tone)):
+   _tree(tr,trunk,leaves)
+  else:
+   _collision_box(tp+Vector3(0,trr*1.1,0),Vector3(trr*.36,trr*2.2,trr*.36))
   if incremental and Time.get_ticks_usec()-slice_started>4500:_progress(progress,.52,"Menyiapkan vegetasi");await get_tree().process_frame;slice_started=Time.get_ticks_usec()
+ nature.finalize(self)
  var metal=_standard(.55,.55);var wood=_standard(0,.86);var lamp=_standard(0,.25,Color("c5b06d")*.45)
  for i in range(m.props.size()):
   var p=m.props[i];var pos=Vector3(float(p.x)/10,0,float(p.y)/10)
